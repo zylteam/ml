@@ -1,0 +1,681 @@
+<include file="public@header_vue"/>
+<style>
+    .custom-tree-node {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    padding-right: 8px;
+  }
+
+	.avatar-uploader .el-upload {
+		border: 1px dashed #d9d9d9;
+		border-radius: 6px;
+		cursor: pointer;
+		position: relative;
+		overflow: hidden;
+	}
+	.avatar-uploader .el-upload:hover {
+		border-color: #409EFF;
+	}
+	.avatar-uploader-icon {
+		font-size: 28px;
+		color: #8c939d;
+		width: 80px;
+		height: 80px;
+		line-height: 80px;
+		text-align: center;
+	}
+	.avatar {
+		width: 80px;
+		height: 80px;
+		display: block;
+	}
+  
+</style>
+</head>
+<body>
+<div id="app">
+<el-tabs  type="border-card">
+    <el-tab-pane label="分类管理" v-loading="onDataLoading">
+    		
+    		
+		  	<el-tabs v-model="activeName" :tab-position="tabPosition" @tab-click="handleClick">
+			    <!--<el-tab-pane label="地区分类" name="category_region">-->
+
+			        <!--<el-tree :data="treedata" node-key="id" :default-expand-all="false" :expand-on-click-node="false"> -->
+			    		<!--<span class="custom-tree-node" slot-scope="{ node, data }"> -->
+			        		<!--<span>{{ node.label }}</span> -->
+				        	<!--<span> -->
+				        		<!--<el-button  type="text" size="mini" @click="add(data.id)"> 新增子类 </el-button>-->
+				        		<!--<el-button  type="text" size="mini" @click="append(data)"> 修改 </el-button>-->
+					        <!--</span>-->
+				      	<!--</span>-->
+				    <!--</el-tree>-->
+			    	<!---->
+			    <!--</el-tab-pane>-->
+			    <el-tab-pane label="商品分类" name="category_goods">
+			    	<el-row>
+					<el-col :span="24" style="text-align: left">
+						<el-button type="primary" size="mini" @click="append(null)">新增</el-button>
+					</el-col>
+				</el-row>
+			        <el-tree :data="treedata" node-key="id"  :expand-on-click-node="false" :default-expand-all="false"> 
+			    		<span class="custom-tree-node" slot-scope="{ node, data }"> 
+			        		<span>
+								{{ node.label }}
+							</span>
+							<span>
+
+							</span>
+				        	<span> 
+				        		<el-button  type="text" size="mini" @click="add(data.id)"> 新增子类 </el-button>
+				        		<el-button  type="text" size="mini" @click="append(data)"> 修改 </el-button>
+					          	<!--<el-button  type="text" size="mini" @click="remove(data.id)"> 删除 </el-button>-->
+					        </span>
+				      	</span>
+				    </el-tree>
+			    </el-tab-pane>
+
+			    <el-tab-pane label="其他分类" name="category_other">
+			    	<el-row>
+			            <el-col :span="24" style="text-align: left">
+			                <el-button type="primary" size="mini" @click="appendgroup(null)">新增分类组</el-button>
+			            </el-col>
+			        </el-row>
+			    	<el-table :data="tableData" style="width: 100%"> 
+			    		<el-table-column prop="id" label="组别ID" width="180"> </el-table-column>
+					      <el-table-column prop="name" label="组名" width="180"> </el-table-column>
+					      <el-table-column prop="alias" label="调用名"> </el-table-column>
+						  <el-table-column label="操作" fixed="right" width="400">
+				                <template slot-scope="scope">
+				                    <el-button type="primary" size="mini" @click="groupchild(scope.row)">新增子类</el-button>
+				                    <el-button type="success" size="mini" @click="appendgroup(scope.row)">修改</el-button>
+  									<!--<el-button type="info" size="mini">删除</el-button>-->
+				                </template>
+			              </el-table-column>    
+			    	</el-table>
+			    </el-tab-pane>
+		    </el-tabs>
+    	
+    	
+    </el-tab-pane>
+    <!--弹层-->
+    <el-dialog :visible.sync="dialogVisible" width="60%">
+        
+     	<span v-if="appendForm.id === ''" slot="title" class="dialog-footer">分类新增</span>
+        <span v-else slot="title" class="dialog-footer">分类修改</span>
+        
+        <el-form :model="form" class="demo-form-inline" label-width="80px">
+        	
+        	<el-form-item label="类目标识">
+                <el-col :span="10">
+                    <el-input v-model="appendForm.alias" placeholder="当前类目" :disabled="true"></el-input>
+                </el-col>
+			</el-input>
+            </el-form-item>
+        	
+        	<el-form-item label="上级类目">
+                <el-col :span="10">
+                    <el-select v-model="appendForm.parent_id" placeholder="请选择">
+                    	<el-option :key="0" label="顶级" :value="0"> </el-option>
+				    	<el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value"> </el-option>
+				  	</el-select>
+                </el-col>
+            </el-form-item>
+            
+            
+        	
+            <el-form-item label="类目名称">
+                <el-col :span="10">
+                    <el-input v-model="appendForm.label" placeholder="类目名称"></el-input>
+                </el-col>
+            </el-form-item>
+
+			<el-form-item label="类目图标" prop="thumb" >
+				<el-col :span="10">
+					<el-upload class="avatar-uploader" action="/user/Asset/webuploader" :headers="headers" :show-file-list="false" :on-success="handleAvatarSuccess">
+						<img v-if="appendForm.img" :src="appendForm.img" class="avatar">
+						<i v-else class="el-icon-plus avatar-uploader-icon"></i>
+						<div slot="tip" class="el-upload__tip">只能上传jpg/png文件，像素为px</div>
+					</el-upload>
+				</el-col>
+
+			</el-form-item>
+
+
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submit()">提交</el-button>
+        </span>
+    </el-dialog>
+    
+    <!--分类组新增弹层-->
+    <el-dialog :visible.sync="dialogVisible2" width="60%">
+        
+     	<span v-if="fromgroup.id === ''" slot="title" class="dialog-footer">分类分组新增</span>
+        <span v-else slot="title" class="dialog-footer">分类分组修改</span>
+        
+        <el-form :model="form" class="demo-form-inline" label-width="80px">
+        	 <el-form-item label="分组名称">
+                <el-col :span="10">
+                    <el-input v-model="fromgroup.name" placeholder="分组名称"></el-input>
+                </el-col>
+            </el-form-item>
+            
+        	<el-form-item label="调用名">
+                <el-col :span="10">
+                    <el-input v-model="fromgroup.alias" placeholder="分组调用名" ></el-input>
+                </el-col>
+            </el-form-item>
+        	
+           
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submitgroup()">提交</el-button>
+        </span>
+    </el-dialog>
+    
+    <!--弹层其他子分类设置-->
+    <el-dialog title="子分类设置" :visible.sync="kebiaoVisible" width="60%" v-loading="onDataLoading">
+        <el-form :model="dynamicValidateForm" ref="dynamicValidateForm" label-width="100px" class="demo-dynamic">
+		  <el-form-item label="分类组">
+		  	<el-col :span="15">
+		    	<el-input v-model="dynamicValidateForm.alias" :disabled="true"></el-input>
+		  	</el-col>
+		  </el-form-item>
+		  <el-form-item v-for="(domain, index) in dynamicValidateForm.domains" :label="'子类' + index" :key="domain.key" :prop="'domains.' + index + '.alias'" >
+		     	<el-col :span="10">
+			    	<el-input v-model="domain.name" placeholder="类目名称"></el-input>
+			    </el-col>
+			    <el-col :span="5">
+			    	<el-input v-model="domain.order" placeholder="排序"></el-input>
+			    </el-col>
+			    <el-button @click.prevent="removeDomain(domain)">删除</el-button>
+		  </el-form-item>
+		  <el-form-item>
+		  	<el-button @click="addDomain">新增子分类</el-button>
+			    <el-button type="primary" @click="submitForm('dynamicValidateForm')">提交</el-button>
+		  </el-form-item>
+		</el-form>
+    </el-dialog>
+    
+    
+</el-tabs>
+</div>
+</body>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+.el-collapse {
+    margin-top: 10px;
+}
+.detil-item {
+    padding: 20px 0px;
+}
+.left-span {
+    width: 100px;
+}
+</style>
+<script>
+
+
+var app = new Vue({
+    el: '#app',
+    data: function() {
+        return {
+        	tabPosition: 'top',
+        	tableData: [],
+        	loading2:false,
+        	activeName: 'category_goods',
+            treedata: [],
+            options: [],
+            onDataLoading: false,
+            totalNum: 0,
+            
+            currentPage: 1,
+            form: {
+                name: ''
+            },
+            fromgroup:{
+            	id:"",
+            	alias:"",
+            	name:"",
+            },
+            appendForm: {
+                id : '',
+                parent_id : "",
+                label: '',
+                alias : 'category_goods',
+				img:"",
+            },
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            dialogVisible: false,
+            dialogVisible2: false,
+            dialogVisible_edit:false,
+            dialogLoading: false,
+            kebiaoVisible: false,
+            dynamicValidateForm: {
+			          domains: [{
+			            name:'',
+			            order:'',
+			          }],
+			          alias: ''
+			        }
+        }
+    },
+    created () {
+	  let _this = this;
+      this.getData(this.appendForm.alias);
+//    this.getGroup();
+    },
+    methods: {
+    	
+    	removeDomain(item) {
+	        var index = this.dynamicValidateForm.domains.indexOf(item)
+	        if (index !== -1) {
+	          this.dynamicValidateForm.domains.splice(index, 1)
+	        }
+	      },
+	      addDomain() {
+	        this.dynamicValidateForm.domains.push({
+	          name: '',
+	          order: '',
+	          key: Date.now()
+	        });
+	      },
+    	
+    	handleClick(tab, event) {
+    		let _this = this;
+    		_this.appendForm.alias = tab.name;
+	        this.getData(_this.appendForm.alias);
+	        if(tab.name == 'category_other'){
+	        	this.getGroup();
+	        }
+	     },
+        getData (alias) {
+            let _this = this;
+            this.onDataLoading = true;
+            let params = {categorytype:  this.appendForm.alias};
+            axios.get('/admin/category/categorylist', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then(function (response) {
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.treedata = response.data.data.list;
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        getGroup () {
+            let _this = this;
+            this.onDataLoading = true;
+            axios.get('/admin/category/categorygroup', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            }).then(function (response) {
+//          	console.log(response);return false;
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.tableData = response.data.data;
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        
+        append(row){
+    		console.log(row);
+        	if (row) {
+               this.appendForm = row;
+            } else {
+                this.appendForm = {
+	                id : '',
+	                parent_id : '',
+	                label: '',
+	                alias : this.appendForm.alias,
+					img:"",
+        		};
+            }
+        	
+        	
+            
+            this.dialogVisible = true;
+            this.dialogLoading = true;
+            
+            
+            let _this = this;
+            this.onDataLoading = true;
+            console.log(this.appendForm.alias);
+            let params = {categorytype:  this.appendForm.alias};
+            axios.get('/admin/category/categoryparent', {
+            	headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then(function (response) {
+            	
+            	
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.options = response.data.data;
+//                  _this.treedata = response.data.data.count;
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+            
+        },
+        
+        appendgroup(row){
+        	if (row) {
+               this.fromgroup = row;
+            } else {
+                this.fromgroup = {
+	                id:"",
+	            	alias:"",
+	            	name:"",
+            	}
+            }
+            this.dialogVisible2 = true;
+//          this.dialogLoading = true;
+            let _this = this;
+//          this.onDataLoading = true;
+            console.log(this.appendForm.alias);
+        },
+        
+        add(id){
+        	console.log(id);
+        	
+            this.appendForm = {
+                id : '',
+                parent_id : id,
+                label: '',
+                alias : this.appendForm.alias,
+				img:'',
+    		};
+        	
+        	
+            
+            this.dialogVisible = true;
+            this.dialogLoading = true;
+            
+            
+            let _this = this;
+            this.onDataLoading = true;
+            console.log(this.appendForm.alias);
+            let params = {categorytype:  this.appendForm.alias};
+            axios.get('/admin/category/categoryparent', {
+            	headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then(function (response) {
+            	
+            	
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.options = response.data.data;
+//                  _this.treedata = response.data.data.count;
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+            
+        },
+        
+        groupchild(row) {
+            let _this = this;
+            this.kebiaoVisible = true;
+            this.onDataLoading = true;
+            if (row) {
+                this.dynamicValidateForm.alias = row.alias;
+                let params = {alias: row.alias};
+                _this.$set(this.dynamicValidateForm, 'domains',[{name:"",order:""}]);
+                axios.get('/admin/category/categorygroup_child', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+//                  console.log(response);return false;
+                    _this.onDataLoading = false;
+                    _this.dynamicValidateForm.domains = response.data.data;
+
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            } else {
+                this.dynamicValidateForm = {
+                    domains: [{
+                        name: '',
+                        oder: '',
+                    }],
+                    alias: ""
+                }
+            }
+        },
+
+		handleAvatarSuccess(res, file) {
+			let _this = this;
+			if (res.code === 1) {
+				// this.appendForm.img = '/upload/' + res.data.filepath;res.data.url
+				this.appendForm.img = res.data.url
+				console.log(this.appendForm);
+			} else {
+				_this.$message.error(res.msg)
+			}
+		},
+        
+        submitForm () {
+            let _this = this;
+            this.dialogLoading = true;
+            axios.post('/admin/category/category_other_child_add', this.dynamicValidateForm, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.dialogLoading = false;
+                if (response.data.code === 1) {
+                    if (_this.fromgroup.id === '') {
+                        _this.$message({
+                            message: '新增完成',
+                            type: 'success'
+                        });
+                    } else {
+                        _this.$message({
+                            message: '修改成功',
+                            type: 'success'
+                        });
+                    }
+                    _this.dialogVisible2 = false;
+//                  _this.getGroup();
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        
+        submit () {
+            let _this = this;
+            this.dialogLoading = true;
+            axios.post('/admin/category/categorySubmit', this.appendForm, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.dialogLoading = false;
+                if (response.data.code === 1) {
+                    if (_this.appendForm.id === '') {
+                        _this.$message({
+                            message: '新增完成',
+                            type: 'success'
+                        });
+                    } else {
+                        _this.$message({
+                            message: '修改成功',
+                            type: 'success'
+                        });
+                    }
+                    _this.dialogVisible = false;
+                    _this.getData();
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        
+        submitgroup () {
+            let _this = this;
+            this.dialogLoading = true;
+            axios.post('/admin/category/categorygroupSubmit', this.fromgroup, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.dialogLoading = false;
+                if (response.data.code === 1) {
+                    if (_this.fromgroup.id === '') {
+                        _this.$message({
+                            message: '新增完成',
+                            type: 'success'
+                        });
+                    } else {
+                        _this.$message({
+                            message: '修改成功',
+                            type: 'success'
+                        });
+                    }
+                    _this.dialogVisible2 = false;
+                    _this.getGroup();
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        
+        
+        
+        
+        remove (id) {
+            let _this = this;
+            this.$confirm('此操作将永久删除该条目, 是否继续?', '警告', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.onDataLoading = true;
+                axios.delete('/admin/category/categoryremove', {
+                	headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                	},
+                    params: {id: id}
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message({
+                            message: '删除成功',
+                            type: 'success'
+                        });
+                        _this.getData();
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            }).catch(() => {
+                this.$message({
+                    type: 'info',
+                    message: '已取消删除'
+                });
+            });
+        },
+        
+	      
+        
+        
+        formatDateFull (timestamp) {
+            let date = new Date(timestamp*1000);
+            return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDay());
+        },
+        formatDateAll (timestamp) {
+            let date = new Date(timestamp*1000);
+            return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDay()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+        },
+        formatDate (timestamp) {
+            let date = new Date(timestamp*1000);
+            return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1);
+        },
+        prefix (num) {
+            if (num < 10) {
+                return '0' + num;
+            }
+            return num;
+        }
+    }
+})
+
+
+
+
+
+
+
+
+</script>
+</html>

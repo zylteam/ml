@@ -1,0 +1,1513 @@
+<include file="public@header_vue"/>
+<!-- CDNJS :: Sortable (https://cdnjs.com/) -->
+<script src="//cdn.jsdelivr.net/npm/sortablejs@1.7.0/Sortable.min.js"></script>
+<!-- CDNJS :: Vue.Draggable (https://cdnjs.com/) -->
+<script src="//cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.15.0/vuedraggable.min.js"></script>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+.mobile {
+    width: 100%;
+    background-color: #eee;
+    height: 600px;
+}
+.mobile .el-scrollbar__wrap {
+    overflow-x: hidden;
+}
+.mobile-main {
+    padding: 0 20px;
+}
+.carousel {
+    position: relative;
+}
+.carousel-title {
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    position: absolute;
+    top: 0;
+}
+.carousel-title-pos {
+    height:29px;
+    line-height: 29px;
+    background:rgba(0,0,0,1);
+    border-radius:15px;
+    opacity:0.4;
+    color: #fff;
+    padding: 0 10px;
+    box-sizing: border-box;
+    display: -webkit-flex; /* Safari */
+    display: flex;
+    flex-direction: row;
+}
+.carousel-title-pos img{
+    margin-top: 9px;
+}
+.carousel-title-pos .pos {
+    width: 13px;
+    height: 13px;
+    margin-right: 4px;
+}
+.carousel-title-pos .arrow {
+    width: 13px;
+    height: 13px;
+    margin-left: 4px;
+}
+.carousel-title-pos span {
+    flex: 1;
+}
+.carousel-search {
+    height: 29px;
+    line-height: 29px;
+    background: rgba(255,255,255,1);
+    border-radius: 15px;
+    text-align: center;
+    color:rgba(153,153,153,1);
+}
+
+.main-item {
+    margin-bottom: 10px;
+    position: relative;
+}
+/* 列表元素操作工具箱 */
+.item-tool-box {
+    display: flex;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    padding-left: 20px;
+    padding-right: 20px;
+    position: absolute;
+    top: 0;
+    left: -20px;
+    background-color: rgba(0, 0, 0, 0.6);
+    transition: opacity 0.5s;
+    -webkit-transition: opacity 0.5s; /* Safari */
+    z-index: 10;
+}
+.item-tool-box .item-tool {
+    display: flex;
+    justify-content: center;
+    height: 100%;
+    vertical-align:middle;
+    text-align: center;
+    flex: 1;
+}
+.item-tool:first-child {
+    margin-left: 40px;
+}
+.item-tool:last-child {
+    margin-right: 40px;
+}
+.edit-able .main-item:hover .item-tool-box {
+    opacity: 1;
+}
+
+.el-collapse-item__content {
+    padding: 10px 10px 25px;
+}
+.chose-item {
+    cursor: pointer;
+    box-shadow:1px 2px 6px 0 rgba(0,0,0,0.1);
+    width: 300px!important;
+}
+/* 功能入口 */
+.function-entry-box {
+    background:rgba(255,255,255,1);
+    border-radius: 6px;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+.function-entry-item {
+    padding: 10px;
+    flex: 1;
+    box-sizing: border-box;
+}
+.function-entry-item img {
+    width: 100%;
+}
+.function-entry-item span {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+}
+.function_entry_form_item .el-form-item__label {
+    height: 40px;
+    line-height: 40px;
+}
+.function-entry-icon-uploader {
+    width: 40px;
+    height: 40px;
+    margin-right: 8px;
+}
+.function-entry-icon-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.function-entry-icon-uploader .el-upload:hover {
+    border-color: #409EFF;
+}
+.function-entry-icon-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    text-align: center;
+}
+.function-entry-icon {
+    width: 40px;
+    height: 40px;
+    display: block;
+}
+/* 楼层 */
+.floor {
+    background-color: #fff;
+    height: 34px;
+    line-height: 34px;
+    border-radius: 6px;
+    padding: 0 6px;
+    box-sizing: border-box;
+}
+.floor-base {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+.floor-base .floor-title {
+    font-weight: bolder;
+    flex: 1;
+}
+.floor-base .floor-more {
+    font-size: 13px;
+}
+/* 活动列表 */
+.activity {
+    margin-bottom: 10px;
+}
+/* 普通活动列表 */
+.activity_row_list {
+    width: 100%;
+    position: relative;
+}
+.activity-row-list-item {
+    background-color: #333;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.activity-row-list-item .el-upload {
+    width: 100%;
+}
+.activity-row-list-item img {
+    vertical-align: bottom;
+    width: 100%;
+}
+.activity-row-list-item .activity-no-img {
+    color: #fff;
+    height: 90px;
+    line-height: 90px;
+    text-align: center;
+    font-size: 16px;
+}
+/* 横向活动列表 */
+.activity-column-list {
+    width: 100%;
+    overflow: hidden;
+}
+.activity-column-list-content {
+    width: max-content;
+}
+.activity-column-list-item {
+    float: left;
+    width: 160px;
+    margin-bottom: 0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.activity-column-list-item:not(:last-child) {
+    margin-right: 10px;
+}
+.activity-column-list-item img {
+    height: 90px;
+    width: 160px;
+    vertical-align: bottom;
+}
+.activity-column-list-item .activity-no-img {
+    width: 100%;
+    height: 90px;
+    line-height: 90px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+}
+.activity-column-list-uploader {
+    height: 90px;
+}
+.activity-column-list-uploader img {
+    height: 90px;
+    width: 160px;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.activity-column-list-uploader .activity-no-img {
+    background: #333;
+    width: 160px;
+    height: 90px;
+    line-height: 90px;
+    color: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+}
+/* 三联 */
+.activity-3-box {
+    width: 100%;
+    box-shadow: none;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.activity-3 {
+    width: 100%;
+    margin-bottom: 0;
+    border-radius: 0;
+    font-size: 0;
+}
+.activity-3 img {
+    width: 100%;
+}
+.activity-3 .activity-no-img {
+    width: 100%;
+    height: 100px;
+    line-height: 100px;
+    background: #333;
+    color: #fff;
+    overflow: hidden;
+    text-align: center;
+    font-size: 14px;
+}
+.activity-3-left .activity-no-img {
+    height: 200px;
+    line-height: 200px;
+}
+/* 双广告位 */
+.activity-2-box {
+    width: 100%;
+    box-shadow: none;
+}
+.activity-2 {
+    width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.activity-2 img {
+    width: 100%;
+    vertical-align: bottom;
+}
+.activity-2 .activity-no-img {
+    width: 100%;
+    height: 100px;
+    line-height: 100px;
+    background: #333;
+    color: #fff;
+    text-align: center;
+}
+
+.carousel-item {
+    width: 100%;
+    height: 150px;
+}
+.carousel-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+/* 横向商品列表 */
+.goods-column-list {
+    width: 100%;
+    overflow: hidden;
+    background: rgba(255,255,255,1);
+    border-radius: 6px;
+}
+.goods-column-list-content {
+    width: max-content;
+}
+.goods-column-list-item {
+    float: left;
+    width: 120px;
+    padding: 10px;
+    margin-bottom: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+.goods-column-list-img {
+    width: 100px;
+    height: 100px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+.goods-column-list-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.goods-column-list-title {
+    height: 34px;
+    font-size: 11px;
+    color: #333333;
+}
+.goods-column-list-price {
+    font-size: 10px;
+    color: #999999;
+}
+.goods-column-list-price span {
+    font-size: 15px;
+    color: #D0021B;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="首页模板" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="样式名称:">
+                            <el-input v-model="form.name" placeholder="样式名称" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null, 1)" icon="el-icon-plus">新增模板</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="name" label="样式名称" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="floors" label="楼层数量" min-width="100">
+                    <template slot-scope="scope">
+                        {{scope.row.floors}}个
+                    </template>
+                </el-table-column>
+                <el-table-column prop="online" label="上线/下线" min-width="100">
+                    <template slot-scope="scope">
+                        <el-switch :disabled="scope.row.id === 1 && scope.row.online === 1 ? true : false" v-model="scope.row.online" :active-value="1" :inactive-value="0" active-text="开" inactive-text="关" @change="(value) => {handleOnlineStatus(scope.row, value)}"></el-switch>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="130">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="edit(scope.row, 0)">查看</el-button>
+                        <el-button v-if="scope.row.id !== 1" size="mini" type="text" @click="edit(scope.row, 1)">编辑</el-button>
+                        <el-button v-if="scope.row.id !== 1" size="mini" type="text" @click="del(scope.row.id)" :disabled="scope.row.online === 1 ? true : false">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog fullscreen :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading" title="首页模板"  :class="{'edit-able': editState === 1}" @close="onDialogClose" @opened="onDialogOpen">
+        <el-row>
+            <el-col :span="24">
+                <el-form :model="editForm" label-width="80px">
+                    <el-form-item>
+                        <el-button v-if="editState === 1" type="primary" @click="submit" size="medium" label-width="0px">保存模板</el-button>
+                    </el-form-item>
+                    <el-form-item label="模板名称:">
+                        <el-input v-model="editForm.name" placeholder="模板名称"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20">
+            <el-col :span="10" :sm="10" :md="8" :lg="6">
+                <div class="mobile">
+                    <el-scrollbar style="height: 100%;">
+                        <div class="main-item carousel">
+                            <el-row :gutter="10" class="carousel-title">
+                                <el-col :span="12">
+                                    <div class="carousel-title-pos">
+                                        <img class="pos" src="__TMPL__/public/assets/images/pos.png"/>
+                                        <span>菜菜网总部</span>
+                                        <img class="arrow" src="__TMPL__/public/assets/images/down-arrow.png"/>
+                                    </div>
+                                </el-col>
+                                <el-col :span="12">
+                                    <div class="carousel-search">搜索</div>
+                                </el-col>
+                            </el-row>
+                            <el-carousel height="150px" arrow="never">
+                                <el-carousel-item v-for="item in banner" :key="item.id">
+                                    <div class="carousel-item">
+                                        <img :src="item.url">
+                                    </div>
+                                </el-carousel-item>
+                            </el-carousel>
+                            <div class="item-tool-box">
+                                <div class="item-tool">
+                                    <el-button type="text" icon="el-icon-plus" @click.stop="choseTemplate(-1)">添加</el-button>
+                                </div>
+                            </div>
+                        </div>
+                        <draggable v-model="editForm.template" class="mobile-main">
+                            <template v-for="(item, i) in editForm.template">
+                                <div class="main-item">
+                                    <template v-if="item.type === 'function_entry_4'">
+                                        <div class="function-entry-box function-entry-4">
+                                            <div class="function-entry-item">
+                                                <img :src="item.data_list[0].icon"/>
+                                                <span>{{item.data_list[0].title}}</span>
+                                            </div>
+                                            <div class="function-entry-item">
+                                                <img :src="item.data_list[1].icon"/>
+                                                <span>{{item.data_list[1].title}}</span>
+                                            </div>
+                                            <div class="function-entry-item">
+                                                <img :src="item.data_list[2].icon"/>
+                                                <span>{{item.data_list[2].title}}</span>
+                                            </div>
+                                            <div class="function-entry-item">
+                                                <img :src="item.data_list[3].icon"/>
+                                                <span>{{item.data_list[3].title}}</span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template v-if="item.type === 'floor_base'">
+                                        <div class="floor floor-base">
+                                            <span class="floor-title">{{item.data.title}}</span>
+                                            <span class="floor-more">More</span>
+                                        </div>
+                                    </template>
+                                    <template v-if="item.type === 'activity_row_list'">
+                                        <div class="activity_row_list">
+                                            <div class="activity activity-row-list-item" v-for="activity in item.data_list">
+                                                <img v-if="activity.img_url" :src="activity.img_url">
+                                                <div v-else class="activity-no-img">图片</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template v-if="item.type === 'activity_column_list'">
+                                        <div class="activity-column-list">
+                                            <div class="activity-column-list-content">
+                                                <div class="activity activity-column-list-item" v-for="activity in item.data_list">
+                                                    <img v-if="activity.img_url" :src="activity.img_url">
+                                                    <div v-else class="activity-no-img">图片</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template v-if="item.type === 'activity_3'">
+                                        <div class="activity-3-box">
+                                            <el-row>
+                                                <el-col :span="12">
+                                                    <div class="activity activity-3 activity-3-left">
+                                                        <img v-if="item.data_list[0].img_url" :src="item.data_list[0].img_url">
+                                                        <div v-else class="activity-no-img">图片</div>
+                                                    </div>
+                                                </el-col>
+                                                <el-col :span="12">
+                                                    <el-row>
+                                                        <div class="activity activity-3">
+                                                            <img v-if="item.data_list[1].img_url" :src="item.data_list[1].img_url">
+                                                            <div v-else class="activity-no-img">图片</div>
+                                                        </div>
+                                                    </el-row>
+                                                    <el-row>
+                                                        <div class="activity activity-3">
+                                                            <img v-if="item.data_list[2].img_url" :src="item.data_list[2].img_url">
+                                                            <div v-else class="activity-no-img">图片</div>
+                                                        </div>
+                                                    </el-row>
+                                                </el-col>
+                                            </el-row>
+                                        </div>
+                                    </template>
+                                    <template v-if="item.type === 'activity_2'">
+                                        <div class="activity-2-box">
+                                            <el-row :gutter="10">
+                                                <el-col :span="12">
+                                                    <div class="activity activity-2">
+                                                        <img v-if="item.data_list[0].img_url" :src="item.data_list[0].img_url">
+                                                        <div v-else class="activity-no-img">图片</div>
+                                                    </div>
+                                                </el-col>
+                                                <el-col :span="12">
+                                                    <div class="activity activity-2">
+                                                        <img v-if="item.data_list[1].img_url" :src="item.data_list[1].img_url">
+                                                        <div v-else class="activity-no-img">图片</div>
+                                                    </div>
+                                                </el-col>
+                                            </el-row>
+                                        </div>
+                                    </template>
+                                    <template v-if="item.type === 'goods_column_list'">
+                                        <div class="goods-column-list" @click="selectTemplate('goods_column_list')">
+                                            <div class="goods-column-list-content">
+                                                <div v-if="item.data_list.length === 0" style="padding: 10px;height: 50px;line-height: 30px;box-sizing: border-box;">暂无商品</div>
+                                                <div class="goods-column-list-item" v-for="goods in item.data_list">
+                                                    <div class="goods-column-list-img">
+                                                        <img :src="goods.title_img[0]"/>
+                                                    </div>
+                                                    <div class="goods-column-list-title">{{goods.name}}</div>
+                                                    <div class="goods-column-list-price"><span>￥{{goods.price}}</span>/份</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <div class="item-tool-box">
+                                        <div class="item-tool">
+                                            <el-button type="text" icon="el-icon-edit" @click.stop="editTemplate(item, i, editForm.id)">编辑</el-button>
+                                        </div>
+                                        <div class="item-tool">
+                                            <el-button type="text" icon="el-icon-plus" @click.stop="choseTemplate(i)">添加</el-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </draggable>
+                    </el-scrollbar>
+                </div>
+            </el-col>
+            <el-col :span="14" :sm="14" :md="16" :lg="18">
+                <el-collapse accordion v-if="onChoseTemplate">
+                    <el-collapse-item title="功能入口" name="1">
+                        <div class="chose-item function-entry-box function-entry-4" @click="selectTemplate('function_entry_4')">
+                            <div class="function-entry-item">
+                                <img src="__TMPL__/public/assets/images/icon.png"/>
+                                <span>入口名称</span>
+                            </div>
+                            <div class="function-entry-item">
+                                <img src="__TMPL__/public/assets/images/icon.png"/>
+                                <span>入口名称</span>
+                            </div>
+                            <div class="function-entry-item">
+                                <img src="__TMPL__/public/assets/images/icon.png"/>
+                                <span>入口名称</span>
+                            </div>
+                            <div class="function-entry-item">
+                                <img src="__TMPL__/public/assets/images/icon.png"/>
+                                <span>入口名称</span>
+                            </div>
+                        </div>
+                    </el-collapse-item>
+                    <el-collapse-item title="楼层标题" name="2">
+                        <div class="chose-item floor floor-base" @click="selectTemplate('floor_base')">
+                            <span class="floor-title">楼层标题</span>
+                            <span class="floor-more">More</span>
+                        </div>
+                    </el-collapse-item>
+                    <el-collapse-item title="普通活动" name="3">
+                        <el-alert style="margin-bottom: 10px;" title="列表" type="info" :closable="false"></el-alert>
+                        <div class="chose-item activity_row_list" @click="selectTemplate('activity_row_list')">
+                            <div class="activity activity-row-list-item">
+                                <div class="activity-no-img">图片</div>
+                            </div>
+                        </div>
+                        <el-alert style="margin-bottom: 10px;" title="组图" type="info" :closable="false"></el-alert>
+                        <div class="chose-item activity-column-list" @click="selectTemplate('activity_column_list')">
+                            <div class="activity-column-list-content">
+                                <div class="activity activity-column-list-item">
+                                    <div class="activity-no-img">图片</div>
+                                </div>
+                                <div class="activity activity-column-list-item">
+                                    <div class="activity-no-img">图片</div>
+                                </div>
+                                <div class="activity activity-column-list-item">
+                                    <div class="activity-no-img">图片</div>
+                                </div>
+                            </div>
+                        </div>
+                        <el-alert style="margin-bottom: 10px;margin-top: 10px;" title="三联" type="info" :closable="false"></el-alert>
+                        <div class="chose-item activity-3-box" @click="selectTemplate('activity_3')">
+                            <el-row>
+                                <el-col :span="12">
+                                    <div class="activity activity-3 activity-3-left">
+                                        <div class="activity-no-img">图片</div>
+                                    </div>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-row>
+                                        <div class="activity activity-3">
+                                            <div class="activity-no-img">图片</div>
+                                        </div>
+                                    </el-row>
+                                    <el-row>
+                                        <div class="activity activity-3">
+                                            <div class="activity-no-img">图片</div>
+                                        </div>
+                                    </el-row>
+                                </el-col>
+                            </el-row>
+                        </div>
+                        <el-alert style="margin-bottom: 10px;" title="双广告位" type="info" :closable="false"></el-alert>
+                        <div class="chose-item activity-2-box" @click="selectTemplate('activity_2')">
+                            <el-row :gutter="20">
+                                <el-col :span="12">
+                                    <div class="activity activity-2">
+                                        <div class="activity-no-img">图片</div>
+                                    </div>
+                                </el-col>
+                                <el-col :span="12">
+                                    <div class="activity activity-2">
+                                        <div class="activity-no-img">图片</div>
+                                    </div>
+                                </el-col>
+                            </el-row>
+                        </div>
+                    </el-collapse-item>
+                    <el-collapse-item title="商品列表" name="4">
+                        <el-alert style="margin-bottom: 10px;" title="横向列表" type="info" :closable="false"></el-alert>
+                        <div class="chose-item goods-column-list" @click="selectTemplate('goods_column_list')">
+                            <div class="goods-column-list-content">
+                                <div class="goods-column-list-item">
+                                    <div class="goods-column-list-img">
+                                        <img src="__TMPL__/public/assets/images/goods_1.jpg"/>
+                                    </div>
+                                    <div class="goods-column-list-title">绿地蔬菜 350g/份</div>
+                                    <div class="goods-column-list-price"><span>￥4.1</span>/份</div>
+                                </div>
+                                <div class="goods-column-list-item">
+                                    <div class="goods-column-list-img">
+                                        <img src="__TMPL__/public/assets/images/goods_2.jpg"/>
+                                    </div>
+                                    <div class="goods-column-list-title">新鲜水果 350g/份</div>
+                                    <div class="goods-column-list-price"><span>￥4.4</span>/份</div>
+                                </div>
+                                <div class="goods-column-list-item">
+                                    <div class="goods-column-list-img">
+                                        <img src="__TMPL__/public/assets/images/goods_3.jpg"/>
+                                    </div>
+                                    <div class="goods-column-list-title">有机花菜 500g/份</div>
+                                    <div class="goods-column-list-price"><span>￥4.9</span>/份</div>
+                                </div>
+                            </div>
+                        </div>
+                    </el-collapse-item>
+                </el-collapse>
+                <el-form size="small" label-width="100px" v-if="onEditTemplate">
+                    <template v-if="editTemplateData.type === 'function_entry_4'">
+                        <template v-for="(entry, i) in editTemplateData.data_list">
+                            <el-alert style="margin-bottom: 10px;" :title="`功能入口 ${i}:`" type="info" :closable="false"></el-alert>
+                            <el-form-item class="function_entry_form_item" label="图标:">
+                                <el-upload class="function-entry-icon-uploader" action="/user/Asset/webuploader" :headers="headers" :show-file-list="false" :on-success="(res, file)=>{handleFunctionEntryIconSuccess(res, file, i)}">
+                                    <img v-if="entry.icon" :src="entry.icon" class="function-entry-icon">
+                                    <i v-else class="el-icon-plus function-entry-icon-uploader-icon"></i>
+                                </el-upload>
+                            </el-form-item>
+                            <el-form-item label="标题:">
+                                <el-input v-model="entry.title" placeholder="标题"></el-input>
+                            </el-form-item>
+                            <el-form-item label="跳转类型:">
+                                <el-radio-group v-model="entry.jump_type">
+                                    <el-radio label="H5">H5链接地址</el-radio>
+                                    <el-radio label="inner">APP内部页面</el-radio>
+                                </el-radio-group>
+                            </el-form-item>
+                            <el-form-item label="链接地址:" v-if="entry.jump_type === 'H5'">
+                                <el-input v-model="entry.target_url" placeholder="输入HTTP开头的有效链接"></el-input>
+                            </el-form-item>
+                            <el-form-item label="页面选择:" v-if="entry.jump_type === 'inner'">
+                                <el-select v-model="entry.target_page_type" placeholder="请选择">
+                                    <el-option label="老用户分享" value="share"></el-option>
+                                    <el-option label="分类详情" value="category"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="对应分类:" v-if="entry.target_page_type === 'category'">
+                                <el-select v-model="entry.target_page_params.category_id" placeholder="请选择">
+                                    <el-option v-for="item in topCategory" :label="item.name" :value="item.id + ''"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </template>
+                    </template>
+                    <template v-if="editTemplateData.type === 'floor_base'">
+                        <el-form-item label="楼层标题:">
+                            <el-input v-model="editTemplateData.data.title" placeholder="楼层标题"></el-input>
+                        </el-form-item>
+                        <el-form-item label="跳转类型:">
+                            <el-radio-group v-model="editTemplateData.data.jump_type">
+                                <el-radio label="H5">H5链接地址</el-radio>
+                                <el-radio label="inner">APP内部页面</el-radio>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="链接地址:" v-if="editTemplateData.data.jump_type === 'H5'">
+                            <el-input v-model="editTemplateData.data.target_url" placeholder="输入HTTP开头的有效链接"></el-input>
+                        </el-form-item>
+                        <el-form-item label="页面选择:" v-if="editTemplateData.data.jump_type === 'inner'">
+                            <el-select v-model="editTemplateData.data.target_page_type" placeholder="请选择">
+                                <el-option label="老用户分享" value="share"></el-option>
+                                <el-option label="分类详情" value="category"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="对应分类:" v-if="editTemplateData.data.target_page_type === 'category'">
+                            <el-select v-model="editTemplateData.data.target_page_params.category_id" placeholder="请选择">
+                                <el-option v-for="item in topCategory" :label="item.name" :value="item.id + ''"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </template>
+                    <template v-if="editTemplateData.type === 'activity_row_list'">
+                        <el-form-item style="text-align: right;">
+                            <el-button type="success" icon="el-icon-plus" @click="()=>{editTemplateData.data_list.push(JSON.parse(JSON.stringify(activityBase)))}">新增列表项</el-button>
+                        </el-form-item>
+                        <draggable v-model="editTemplateData.data_list">
+                            <div  v-for="(activity, i) in editTemplateData.data_list">
+                                <div role="alert" class="el-alert el-alert--info" style="margin-bottom: 10px;">
+                                    <div class="el-alert__content">
+                                        <span class="el-alert__title">活动 {{i}}:</span>
+                                        <i v-if="editTemplateData.data_list.length > 1" @click="editTemplateData.data_list.splice(i, 1)" class="el-alert__closebtn el-icon-close" style=""></i>
+                                    </div>
+                                </div>
+                                <el-form-item label="图片:">
+                                    <el-upload class="activity-column-list-uploader" action="/user/Asset/webuploader" :headers="headers" :show-file-list="false" :on-success="(res, file)=>{handleActivityImgSuccess(res, file, i)}">
+                                        <img v-if="activity.img_url" :src="activity.img_url">
+                                        <div v-else class="activity-no-img">图片</div>
+                                    </el-upload>
+                                </el-form-item>
+                                <el-form-item label="跳转类型:">
+                                    <el-radio-group v-model="activity.jump_type">
+                                        <el-radio label="H5">H5链接地址</el-radio>
+                                        <el-radio label="inner">APP内部页面</el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+                                <el-form-item label="链接地址:" v-if="activity.jump_type === 'H5'">
+                                    <el-input v-model="activity.target_url" placeholder="输入HTTP开头的有效链接"></el-input>
+                                </el-form-item>
+                                <el-form-item label="页面选择:" v-if="activity.jump_type === 'inner'">
+                                    <el-select v-model="activity.target_page_type" placeholder="请选择">
+                                        <el-option label="老用户分享" value="share"></el-option>
+                                        <el-option label="商品详情" value="goods"></el-option>
+                                        <el-option label="分类详情" value="category"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="对应商品:" v-if="activity.target_page_type === 'goods'">
+                                    <el-input v-model="activity.target_page_params.goods_id" placeholder="输入商品id"></el-input>
+                                </el-form-item>
+                                <el-form-item label="对应分类:" v-if="activity.target_page_type === 'category'">
+                                    <el-select v-model="activity.target_page_params.category_id" placeholder="请选择">
+                                        <el-option v-for="item in topCategory" :label="item.name" :value="item.id + ''"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </div>
+                        </draggable>
+                    </template>
+                    <template v-if="editTemplateData.type === 'activity_column_list'">
+                        <el-form-item style="text-align: right;">
+                            <el-button type="success" icon="el-icon-plus" @click="()=>{editTemplateData.data_list.push(JSON.parse(JSON.stringify(activityBase)))}">新增列表项</el-button>
+                        </el-form-item>
+                        <draggable v-model="editTemplateData.data_list">
+                            <div v-for="(activity, i) in editTemplateData.data_list">
+                                <div role="alert" class="el-alert el-alert--info" style="margin-bottom: 10px;">
+                                    <div class="el-alert__content">
+                                        <span class="el-alert__title">活动 {{i}}:</span>
+                                        <i v-if="editTemplateData.data_list.length > 3" @click="editTemplateData.data_list.splice(i, 1)" class="el-alert__closebtn el-icon-close" style=""></i>
+                                    </div>
+                                </div>
+                                <el-form-item label="图片:">
+                                    <el-upload class="activity-column-list-uploader" action="/user/Asset/webuploader" :headers="headers" :show-file-list="false" :on-success="(res, file)=>{handleActivityImgSuccess(res, file, i)}">
+                                        <img v-if="activity.img_url" :src="activity.img_url">
+                                        <div v-else class="activity-no-img">图片</div>
+                                    </el-upload>
+                                </el-form-item>
+                                <el-form-item label="跳转类型:">
+                                    <el-radio-group v-model="activity.jump_type">
+                                        <el-radio label="H5">H5链接地址</el-radio>
+                                        <el-radio label="inner">APP内部页面</el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+                                <el-form-item label="链接地址:" v-if="activity.jump_type === 'H5'">
+                                    <el-input v-model="activity.target_url" placeholder="输入HTTP开头的有效链接"></el-input>
+                                </el-form-item>
+                                <el-form-item label="页面选择:" v-if="activity.jump_type === 'inner'">
+                                    <el-select v-model="activity.target_page_type" placeholder="请选择">
+                                        <el-option label="商品详情" value="goods"></el-option>
+                                        <el-option label="分类详情" value="category"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="对应商品:" v-if="activity.target_page_type === 'goods'">
+                                    <el-input v-model="activity.target_page_params.goods_id" placeholder="输入商品id"></el-input>
+                                </el-form-item>
+                                <el-form-item label="对应分类:" v-if="activity.target_page_type === 'category'">
+                                    <el-select v-model="activity.target_page_params.category_id" placeholder="请选择">
+                                        <el-option v-for="item in topCategory" :label="item.name" :value="item.id + ''"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </div>
+                        </draggable>
+                    </template>
+                    <template v-if="editTemplateData.type === 'activity_3'">
+                        <draggable v-model="editTemplateData.data_list">
+                            <div v-for="(activity, i) in editTemplateData.data_list">
+                                <el-alert :title="`活动 ${i}:`" type="info" :closable="false"  style="margin-bottom: 10px;"></el-alert>
+                                <el-form-item label="图片:">
+                                    <el-upload class="activity-column-list-uploader" action="/user/Asset/webuploader" :headers="headers" :show-file-list="false" :on-success="(res, file)=>{handleActivityImgSuccess(res, file, i)}">
+                                        <img v-if="activity.img_url" :src="activity.img_url">
+                                        <div v-else class="activity-no-img">图片</div>
+                                    </el-upload>
+                                </el-form-item>
+                                <el-form-item label="跳转类型:">
+                                    <el-radio-group v-model="activity.jump_type">
+                                        <el-radio label="H5">H5链接地址</el-radio>
+                                        <el-radio label="inner">APP内部页面</el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+                                <el-form-item label="链接地址:" v-if="activity.jump_type === 'H5'">
+                                    <el-input v-model="activity.target_url" placeholder="输入HTTP开头的有效链接"></el-input>
+                                </el-form-item>
+                                <el-form-item label="页面选择:" v-if="activity.jump_type === 'inner'">
+                                    <el-select v-model="activity.target_page_type" placeholder="请选择">
+                                        <el-option label="商品详情" value="goods"></el-option>
+                                        <el-option label="分类详情" value="category"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="对应商品:" v-if="activity.target_page_type === 'goods'">
+                                    <el-input v-model="activity.target_page_params.goods_id" placeholder="输入商品id"></el-input>
+                                </el-form-item>
+                                <el-form-item label="对应分类:" v-if="activity.target_page_type === 'category'">
+                                    <el-select v-model="activity.target_page_params.category_id" placeholder="请选择">
+                                        <el-option v-for="item in topCategory" :label="item.name" :value="item.id + ''"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </div>
+                        </draggable>
+                    </template>
+                    <template v-if="editTemplateData.type === 'activity_2'">
+                        <draggable v-model="editTemplateData.data_list">
+                            <div v-for="(activity, i) in editTemplateData.data_list">
+                                <el-alert :title="`活动 ${i}:`" type="info" :closable="false"  style="margin-bottom: 10px;"></el-alert>
+                                <el-form-item label="图片:">
+                                    <el-upload class="activity-column-list-uploader" action="/user/Asset/webuploader" :headers="headers" :show-file-list="false" :on-success="(res, file)=>{handleActivityImgSuccess(res, file, i)}">
+                                        <img v-if="activity.img_url" :src="activity.img_url">
+                                        <div v-else class="activity-no-img">图片</div>
+                                    </el-upload>
+                                </el-form-item>
+                                <el-form-item label="跳转类型:">
+                                    <el-radio-group v-model="activity.jump_type">
+                                        <el-radio label="H5">H5链接地址</el-radio>
+                                        <el-radio label="inner">APP内部页面</el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+                                <el-form-item label="链接地址:" v-if="activity.jump_type === 'H5'">
+                                    <el-input v-model="activity.target_url" placeholder="输入HTTP开头的有效链接"></el-input>
+                                </el-form-item>
+                                <el-form-item label="页面选择:" v-if="activity.jump_type === 'inner'">
+                                    <el-select v-model="activity.target_page_type" placeholder="请选择">
+                                        <el-option label="商品详情" value="goods"></el-option>
+                                        <el-option label="分类详情" value="category"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="对应商品:" v-if="activity.target_page_type === 'goods'">
+                                    <el-input v-model="activity.target_page_params.goods_id" placeholder="输入商品id"></el-input>
+                                </el-form-item>
+                                <el-form-item label="对应分类:" v-if="activity.target_page_type === 'category'">
+                                    <el-select v-model="activity.target_page_params.category_id" placeholder="请选择">
+                                        <el-option v-for="item in topCategory" :label="item.name" :value="item.id + ''"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </div>
+                        </draggable>
+                    </template>
+                    <template v-if="editTemplateData.type === 'goods_column_list'">
+                        <el-form-item style="text-align: right;">
+                            <el-button type="success" icon="el-icon-plus" @click="toChoseGoods">新增列表项</el-button>
+                        </el-form-item>
+                        <el-form-item label="可添加购物车:">
+                            <el-switch v-model="editTemplateData.canBuy" active-color="#13ce66" inactive-color="#ff4949" :active-value="1" :inactive-value="0"></el-switch>
+                        </el-form-item>
+                        <draggable v-model="editTemplateData.data_list">
+                            <div v-for="(goods, i) in editTemplateData.data_list">
+                                <div role="alert" class="el-alert el-alert--info" style="margin-bottom: 10px;">
+                                    <div class="el-alert__content">
+                                        <span class="el-alert__title">商品 {{i}}:</span>
+                                        <i @click="editTemplateData.data_list.splice(i, 1)" class="el-alert__closebtn el-icon-close"></i>
+                                    </div>
+                                </div>
+                                <el-form-item label="商品图片:">
+                                    <div class="goods-column-list-img">
+                                        <img :src="goods.title_img[0]"/>
+                                    </div>
+                                </el-form-item>
+                                <el-form-item label="商品名称:">
+                                    {{goods.name}}
+                                </el-form-item>
+                                <el-form-item label="商品价格:">
+                                    <div class="goods-column-list-price"><span>￥{{goods.price}}</span>/份</div>
+                                </el-form-item>
+                            </div>
+                        </draggable>
+                    </template>
+                    <el-form-item style="text-align: right;">
+                        <el-button type="primary" icon="el-icon-delete" @click="saveTemplateItem">保存楼层</el-button>
+                        <el-button type="danger" icon="el-icon-delete" @click="deleteTemplateItem">删除楼层</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+    </el-dialog>
+    <el-dialog :visible.sync="onChoseGoods" width="60%" title="选择参加商品"  :class="{'edit-able': editState === 1}">
+        <el-row>
+            <el-col :span="24">
+                <el-form :inline="true" :model="goodsChoseForm" size="mini">
+                    <el-form-item label="商品名称：">
+                        <el-input placeholder="商品名称" v-model="goodsChoseForm.name" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item label="商品类别：">
+                        <el-cascader  expand-trigger="hover" :options="categoryTree" v-model="goodsChoseForm.category" > </el-cascader>
+                    </el-form-item>
+                    <el-form-item label="商品价格：">
+                        <el-input placeholder="最低价格" v-model="goodsChoseForm.price[0]" clearable style="width: 100px"></el-input> -
+                        <el-input placeholder="最高价格" v-model="goodsChoseForm.price[1]" clearable style="width: 100px"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="getGoodsData()">查询</el-button>
+                        <el-button type="danger" @click="clearGoodsChoseForm()">清空</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+        <el-table :data="goodsTableData" style="width: 100%" v-loading="goodsDialogLoading" @selection-change="handleGoodsChange">
+            <el-table-column type="selection" width="50"></el-table-column>
+            <el-table-column prop="id" label="#" width="60"></el-table-column>
+            <el-table-column prop="name" label="商品名称" min-width="120" show-overflow-tooltip=""></el-table-column>
+            <el-table-column prop="category_name" label="商品分类" width="120">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.category_name}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="spec" label="规格" width="120"></el-table-column>
+            <el-table-column prop="price" label="单价" width="100">
+                <template slot-scope="scope">
+                    {{scope.row.price}}元
+                </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="60">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.status === 0">下架</span>
+                    <span v-if="scope.row.status === 1">上架</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" fixed="right" width="60">
+                <template slot-scope="scope">
+                    <el-button size="mini" type="text" @click="choseGoods(scope.row)">选择</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination background layout="total,prev, pager, next" :total="goodsTotalNum" :current-page.sync="goodsCurrentPage" @current-change="getGoodsData"></el-pagination>
+        <div slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="choseGoods(true)">确认选择</el-button>
+        </div>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                banner: JSON.parse('{$banner}'),
+                tttt: ['function_entry_4', 'floor_base', 'activity_row_list', 'activity_column_list', 'activity_3', 'activity_2', 'goods_column_list'],
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    name: ''
+                },
+                editForm: {
+                    id : '',
+                    name: '',
+                    floors: 0,
+                    online: 0,
+                    template: []
+                },
+                editState: 0,
+                dialogVisible: false,
+                dialogLoading: false,
+                // 选择模板
+                onChoseTemplate: false,
+                choseTemplateAfter: 0,
+                // 编辑列表元素
+                onEditTemplate: false,
+                editTemplateIndex: 0,
+                editTemplateData: {},
+
+                // 活动基础
+                activityBase: {
+                    img_url: null,
+                    jump_type: 'H5',
+                    target_url: '',
+                    target_page_type: '',
+                    target_page_params: {
+                        goods_id: '',
+                        category_id: ''
+                    }
+                },
+
+                // 选择商品
+                onChoseGoods: false,
+                goodsDialogLoading: false,
+                goodsTableData: [],
+                goodsTotalNum: 0,
+                goodsCurrentPage: 1,
+                goodsChoseForm: {
+                    category: [],
+                    price: ['',''],
+                    name: ''
+                },
+                categoryTree: JSON.parse('{$categoryTree}'),
+                goodsSelection: [],
+
+                topCategory: JSON.parse('{$topCategory}')
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            onDialogClose () {
+                this.onChoseTemplate = false;
+                this.onEditTemplate = false;
+            },
+            onDialogOpen () {
+                if (this.editForm.id !== '') {
+                    this.dialogLoading = true;
+                    axios.get('/admin/show/getTemplate', {
+                        headers: this.headers,
+                        params: {
+                            id: this.editForm.id
+                        }
+                    }).then((response) => {
+                        this.dialogLoading = false;
+                        if (response.data.code === 1) {
+                            this.editForm = response.data.data;
+                        } else {
+                            this.$message.warning(response.data.msg);
+                        }
+                    }).catch((error) => {
+                        this.dialogLoading = false;
+                        this.$message.error(error.toString())
+                    })
+                }
+            },
+            clearForm () {
+                this.form = {
+                    name: ''
+                };
+            },
+            toChoseGoods () {
+                this.onChoseGoods = true;
+                this.getGoodsData();
+            },
+            clearGoodsChoseForm () {
+                this.goodsChoseForm = {
+                    category: [],
+                    price: ['',''],
+                    name: ''
+                };
+            },
+            handleGoodsChange(val) {
+                this.goodsSelection = val;
+            },
+            choseGoods (row) {
+                if (row === true) {
+                    for (item of this.goodsSelection) {
+                        let repeat = false;
+                        for (goods of this.editTemplateData.data_list) {
+                            if (goods.id === item.id) {
+                                repeat = true;
+                                break;
+                            }
+                        }
+                        if (!repeat) {
+                            this.editTemplateData.data_list.push(JSON.parse(JSON.stringify(item)));
+                        }
+                        repeat = false;
+                    }
+                    this.$message.success('添加成功，重复的商品已经自动过滤');
+                } else {
+                    for (goods of this.editTemplateData.data_list) {
+                        if (goods.id === row.id) {
+                            this.$message.warning('该商品已经存在于列表');
+                            return;
+                        }
+                    }
+                    this.$message.success('添加成功');
+                    this.editTemplateData.data_list.push(JSON.parse(JSON.stringify(row)));
+                }
+                this.onChoseGoods = false;
+            },
+            getGoodsData (page = 1) {
+                console.log(this.goodsChoseForm);
+                let _this = this;
+                let params = {page: page};
+                this.goodsDialogLoading = true;
+                if (this.goodsChoseForm.category.length === 2){
+                    params.category = this.goodsChoseForm.category;
+                }
+                if (this.goodsChoseForm.price[0] !== '' || this.goodsChoseForm.price[1] !== ''){
+                    params.price = this.goodsChoseForm.price;
+                }
+                if (this.goodsChoseForm.name !== ''){
+                    params.name = this.goodsChoseForm.name;
+                }
+                axios.get('/admin/show/getGoods', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.goodsDialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.goodsTableData = response.data.data.data;
+                        _this.goodsTotalNum = response.data.data.total;
+                        _this.goodsCurrentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.goodsDialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.name !== ''){
+                    params.name = this.form.name;
+                }
+                axios.get('/admin/show/homeTemplate', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            choseTemplate (i) {
+                if (this.editState === 0) {
+                    return false;
+                }
+                this.choseTemplateAfter = i;
+                this.onChoseTemplate = true;
+                this.onEditTemplate = false;
+            },
+            editTemplate (data, i, homeTemplateId) {
+                if (this.editState === 0) {
+                    return false;
+                }
+                this.editTemplateIndex = i;
+                this.editTemplateData = data;
+                this.editTemplateData.home_template_id = homeTemplateId;
+                this.onEditTemplate = true;
+                this.onChoseTemplate = false;
+            },
+            deleteTemplateItem () {
+                this.$confirm('此操作将永久该楼层，是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    if (!this.editTemplateData.id || this.editTemplateData.id === '') {
+                        this.onEditTemplate = false;
+                        this.editForm.template.splice(this.editTemplateIndex, 1);
+                        this.$message.success('删除成功');
+                    } else {
+                        axios.post('/admin/show/homeTemplateItemDelete', this.editTemplateData, {
+                            headers: this.headers
+                        }).then((response) => {
+                            this.dialogLoading = false;
+                            if (response.data.code === 1) {
+                                this.onEditTemplate = false;
+                                this.editForm.template.splice(this.editTemplateIndex, 1);
+                                this.$message.success('删除成功');
+                            } else {
+                                this.$message.warning(response.data.msg);
+                            }
+                        }).catch((error) => {
+                            this.dialogLoading = false;
+                            this.$message.error(error.toString())
+                        })
+                    }
+                }).catch(() => {
+                    this.$message.info('取消删除');
+                });
+            },
+            saveTemplateItem () {
+                axios.post('/admin/show/homeTemplateItemSubmit', this.editTemplateData, {
+                    headers: this.headers
+                }).then((response) => {
+                    this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        if (!this.editTemplateData.id || this.editTemplateData.id === '') {
+                            this.editTemplateData.id = response.data.data.id;
+                            this.$message.success('新增完成');
+                        } else {
+                            this.$message.success('修改成功');
+                        }
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.dialogLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            edit (row, editState) {
+                this.editState = editState;
+                if (row) {
+                    this.editForm = JSON.parse(JSON.stringify(row));
+                    this.editForm.template = [];
+                } else {
+                    this.editForm = {
+                        id : '',
+                        name: '',
+                        floors: 0,
+                        online: 0,
+                        template: []
+                    };
+                }
+                this.dialogVisible = true;
+            },
+            selectTemplate (type = null) {
+                let item = {
+                    type: type
+                };
+                switch (type) {
+                    case 'function_entry_4':
+                        item.data_list = [
+                            {
+                                icon: "__TMPL__/public/assets/images/icon.png",
+                                title: '入口名称',
+                                jump_type: 'H5',
+                                target_url: '',
+                                target_page_type: '',
+                                target_page_params: {
+                                    category_id: ''
+                                }
+                            },
+                            {
+                                icon: "__TMPL__/public/assets/images/icon.png",
+                                title: '入口名称',
+                                jump_type: 'H5',
+                                target_url: '',
+                                target_page_type: '',
+                                target_page_params: {
+                                    category_id: ''
+                                }
+                            },
+                            {
+                                icon: "__TMPL__/public/assets/images/icon.png",
+                                title: '入口名称',
+                                jump_type: 'H5',
+                                target_url: '',
+                                target_page_type: '',
+                                target_page_params: {
+                                    category_id: ''
+                                }
+                            },
+                            {
+                                icon: "__TMPL__/public/assets/images/icon.png",
+                                title: '入口名称',
+                                jump_type: 'H5',
+                                target_url: '',
+                                target_page_type: '',
+                                target_page_params: {
+                                    category_id: ''
+                                }
+                            }
+                        ];
+                        break;
+                    case 'floor_base':
+                        item.data = {
+                            title: '楼层标题',
+                            jump_type: 'H5',
+                            target_url: '',
+                            target_page_type: '',
+                            target_page_params: {
+                                category_id: ''
+                            }
+                        };
+                        break;
+                    case 'activity_row_list':
+                        item.data_list = [
+                            JSON.parse(JSON.stringify(this.activityBase))
+                        ];
+                        break;
+                    case 'activity_column_list':
+                        item.data_list = [
+                            JSON.parse(JSON.stringify(this.activityBase)),
+                            JSON.parse(JSON.stringify(this.activityBase)),
+                            JSON.parse(JSON.stringify(this.activityBase))
+                        ];
+                        break;
+                    case 'activity_3':
+                        item.data_list = [
+                            JSON.parse(JSON.stringify(this.activityBase)),
+                            JSON.parse(JSON.stringify(this.activityBase)),
+                            JSON.parse(JSON.stringify(this.activityBase))
+                        ];
+                        break;
+                    case 'activity_2':
+                        item.data_list = [
+                            JSON.parse(JSON.stringify(this.activityBase)),
+                            JSON.parse(JSON.stringify(this.activityBase))
+                        ];
+                        break;
+                    case 'goods_column_list':
+                        item.canBuy = 0;
+                        item.data_list = [];
+                        break;
+                    default:
+                        return false;
+                }
+                item.floor = this.choseTemplateAfter + 2;
+                if (this.choseTemplateAfter < 0) {
+                    this.editForm.template.unshift(item);
+                } else {
+                    this.editForm.template.splice(this.choseTemplateAfter + 1, 0, item);
+                }
+                let i = this.choseTemplateAfter + 1;
+                this.editTemplate(this.editForm.template[i], i, this.editForm.id);
+            },
+            submit () {
+                let _this = this;
+                let params = {
+                    name: this.editForm.name,
+                    floor: []
+                };
+                if (this.editForm.id !== '') {
+                    params.id = this.editForm.id
+                }
+                for (let i in this.editForm.template) {
+                    const floor = this.editForm.template[i];
+                    if (!floor.id || floor.id === '') {
+                        const floorNum = parseInt(i) + 1;
+                        this.$message.warning(`第 ${floorNum} 个楼层未保存`);
+                        return;
+                    }
+                    params.floor.push(floor.id);
+                }
+                this.dialogLoading = true;
+                axios.post('/admin/show/homeTemplateSubmit', params, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        if (_this.editForm.id === '') {
+                            _this.$message.success('新增完成');
+                        } else {
+                            _this.$message.success('修改成功');
+                        }
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            handleOnlineStatus (row, value) {
+                let _this = this;
+                let msg = '此操作将下线已上线模板，是否继续?';
+                if (value === 0) {
+                    msg = '操作成功后将自动上线默认模板，是否继续?';
+                }
+                this.$confirm(msg, '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _this.onDataLoading = true;
+                    axios.post('/admin/show/setHomeTemplateOnlineStatus', {
+                        id: row.id,
+                        online: value
+                    }, {
+                        headers: _this.headers
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            if (value === 1) {
+                                _this.$message.success('成功上线');
+                            } else {
+                                _this.$message.success('成功下线');
+                            }
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    row.online = value === 0 ? 1 : 0;
+                    this.$message.info('取消操作');
+                });
+            },
+            del (id) {
+                let _this = this;
+                this.$confirm('此操作将永久删除模板，是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _this.onDataLoading = true;
+                    axios.post('/admin/show/delHomeTemplate', {
+                        id: id
+                    }, {
+                        headers: _this.headers
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            _this.$message.success('删除成功');
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message.info('取消删除');
+                });
+            },
+            handleFunctionEntryIconSuccess(res, file, index) {
+                if (res.code === 1) {
+                    this.editTemplateData.data_list[index].icon = res.data.url;
+                } else {
+                    this.$message.error(res.msg)
+                }
+            },
+            handleActivityImgSuccess(res, file, index) {
+                if (res.code === 1) {
+                    this.editTemplateData.data_list[index].img_url = res.data.url;
+                } else {
+                    this.$message.error(res.msg)
+                }
+            }
+        }
+    })
+</script>
+</html>

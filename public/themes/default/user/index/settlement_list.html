@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>结算记录</title>
+
+    <link rel="stylesheet" href="__TMPL__/user/src/style.css">
+
+    <link rel="stylesheet" href="__TMPL__/user/src/iconfont.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.11.0/lib/theme-chalk/index.css">
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.22/dist/vue.js"></script>
+
+    <script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+
+    <script src="https://unpkg.com/element-ui@2.11.0/lib/index.js"></script>
+
+</head>
+
+<style>
+
+
+
+    .bot {
+
+        position: fixed;
+
+        left: 0;
+
+        bottom: 0;
+
+        width: 100%;
+
+
+
+    }
+
+
+
+    .bot > div {
+
+        box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.1);
+
+    }
+
+
+
+    .dataIpt input {
+
+        line-height: 2.5rem;
+
+        border-radius: 1.25rem;
+
+        padding: 0 3%
+
+    }
+
+
+
+    .dataIpt input:first-child {
+
+        margin-right: 5%
+
+    }
+
+
+
+    .dataIpt2 p {
+
+        line-height: 2.5rem;
+
+        border-radius: 1.25rem;
+
+        background: #fff;
+
+        overflow: hidden;
+
+    }
+
+
+
+    .dataIpt2 > p > span {
+
+        background: #fff028;
+
+        border-radius: 0 1.25rem 1.25rem 0;
+
+        line-height: 3.5rem;
+
+        padding: 0 1rem
+
+    }
+
+    .el-input__inner {
+
+        border: none;
+
+    }
+    .el-pagination{
+        margin: 1rem 0;
+        text-align: center
+    }
+    .el-pagination.is-background .el-pager li:not(.disabled).active{
+        background: #fff028;
+        color: #333
+    }
+
+    .noMore{
+        font-size: 0.7rem;
+        color: #999;
+        text-align: center;
+        margin: 1.5rem 0 7rem 0;
+    }
+
+</style>
+
+
+
+<body>
+
+<div id="app" v-cloak  @touchstart="touchStart($event)" @touchmove="touchMove($event)" class="loadMoudle">
+
+    <div class="top flex text-c" id="headerTop">
+
+        <i class="iconfont icon-left" onclick="goBack()"></i>
+
+        <p class="flex_f1">结算记录</p>
+
+        <span></span>
+
+    </div>
+
+    <el-form :inline="true" :model="form" class="demo-form-inline" size="mini">
+
+        <div class="m_l_r25 mt20  flex flex_fb dataIpt">
+
+            <el-date-picker
+
+                    v-model="form.start_time"
+
+                    type="date" 
+
+                    placeholder="选择日期">
+
+            </el-date-picker>
+
+            <el-date-picker
+
+                    v-model="form.end_time"
+
+                    type="date" style="margin-left:0.5rem"
+
+                    placeholder="选择日期">
+
+            </el-date-picker>
+
+        </div>
+
+        <div class="m_l_r25 mt20 mb25  flex dataIpt2">
+
+            <p class="flex flex_f1">
+
+                <i class="iconfont  ml20 mr1"></i>
+
+                <el-input v-model="form.keyword" class="flex_f1 ml1" placeholder="请输入订单编号"></el-input>
+
+                <!--                <input type="text" class="flex_f1 ml1" placeholder="请输入订单编号">-->
+
+                <span class="" @click="page = 1,getData()">搜索</span>
+
+            </p>
+
+        </div>
+
+    </el-form>
+
+
+
+    <div v-for="(item,index) in tableData " class="m_l_r25 mt20 mb25 p_l_r15 bc_fff p_t_b20">
+
+        <div class="flex ">
+
+            <p class="line1">单号：{{item.order_info.order_sn}} </p>
+            <p class="flex_f1 c_999" style="font-size:0.8rem"> ({{item.status}})</p>
+
+            <span class="c_red2">服务费:￥{{item.service_money}}</span>
+
+        </div>
+
+        <div class="flex mt10 fontsize24">
+
+            <p class="flex_f1 mr10 c_666  line1">{{item.create_time}}</p>
+
+            <span class="c_red2"> </span>
+
+            <span class="c_red2">收入:￥{{item.money}}</span>
+
+        </div>
+
+    </div>
+
+    <div class="noMore" v-if="tableData!= '' && !goMore">
+        已到底部
+    </div>
+
+    <div class="noMore" v-if="tableData== '' && page == 1">
+        暂无内容
+    </div>
+
+
+
+    <div class="bot fontsize30">
+
+        <p class="fontsize22 ml20 c_f8d3f">*核销完成的订单，会在第二天中午12点自动结算</p>
+
+        <div class="flex bc_fff text-c mt10">
+
+            <div class="flex_f1 mt20 mb20  c_red2">
+
+                待结算：¥{$status0}
+
+            </div>
+
+            <div class="flex_f1 borderl1 mt20 mb20 c_666">
+
+                已结算：¥{$status1}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+</div>
+
+</body>
+
+<script>
+function goBack(){
+    window.history.back(-1); 
+}
+    var app = new Vue({
+
+        el:"#app",
+
+        data: function () {
+
+            return {
+
+                tableData: [],
+
+                openid: '',
+                page: 1,
+                top: 0,
+                startY: 0,
+                pullUpState: 0, // 1:上拉加载更多, 2:加载中……, 3:我是有底线的
+                isLoading: false, // 是否正在加载
+                pullUpStateText: {
+                    moreDataTxt: '上拉加载更多',
+                    loadingMoreDataTxt: '加载中...',
+                    noMoreDataTxt: '我是有底线的'                
+                },
+
+                onDataLoading: false,
+
+                goMore:true,
+
+                totalNum: '',
+
+                total:10,
+
+                store_id: '',
+
+                form: {
+
+                    start_time: '',
+
+                    end_time: '',
+
+                    keyword: ''
+
+                }
+
+
+
+            }
+
+        },
+
+        created() {
+
+            this.store_id = JSON.parse("{$store_id}");
+
+            this.getData();
+
+            window.addEventListener('scroll', this.onScroll);
+
+        },
+
+        methods: {
+            change(currentPage) {
+                this.page = currentPage;
+            },
+            touchStart(e) {
+                this.startY = e.targetTouches[0].pageY
+            },
+            touchMove (e) {
+                if (e.targetTouches[0].pageY < this.startY) { // 上拉
+                    this.judgeScrollBarToTheEnd()
+                }
+            },
+            judgeScrollBarToTheEnd () {
+                let innerHeight = document.querySelector('.loadMoudle').clientHeight
+                // 变量scrollTop是滚动条滚动时，距离顶部的距离
+                let scrollTop = document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop
+                // 变量scrollHeight是滚动条的总高度
+                let scrollHeight = document.documentElement.clientHeight || document.body.scrollHeight
+                // 滚动条到底部的条件
+                if (scrollTop + scrollHeight >= innerHeight) {
+                    if (this.pullUpState !== 3 && !this.isLoading) {
+                    this.pullUpState = 1
+                    this.infiniteLoad()
+                    // setTimeout(() => {
+                    //   this.infiniteLoad()
+                    // }, 200)
+                    }
+                }
+            },
+            infiniteLoad () {
+                this.pullUpState = 2
+                this.isLoading = true
+                setTimeout(() => {
+                    this.page++
+                    this.infiniteLoadDone()
+                }, 800)
+            },
+            infiniteLoadDone () {
+                this.pullUpState = 0
+                this.isLoading = false
+                this.getData()
+            },
+            // onScroll(){
+            //     if(this.goMore){
+            //         let innerHeight = document.querySelector('#app').clientHeight;
+            //         let outerHeight = document.documentElement.clientHeight;
+            //         let scrollTop = document.documentElement.scrollTop;
+            //         if (innerHeight < (outerHeight + scrollTop)) {
+            //             console.log("loadmore");
+            //             this.page ++ 
+            //             this.getData()
+            //         }
+            //     }
+            // },
+            getData(page = 1) {
+
+                let _this = this;
+
+                let params = {page: this.page};
+
+                if (_this.store_id) {
+
+                    params.store_id = _this.store_id;
+
+                }
+
+                if (_this.form.keyword) {
+
+                    params.keyword = _this.form.keyword;
+
+                }
+
+                if (_this.form.start_time && _this.form.end_time) {
+
+                    params.start_time = _this.form.start_time;
+
+                    params.end_time = _this.form.end_time;
+
+                }
+
+                _this.onDataLoading = true;
+
+                axios.get("{:url('api/store/settlement_list')}", {
+
+                    headers: {
+
+                        'X-Requested-With': 'XMLHttpRequest',
+
+                    },
+
+                    params: params
+
+                }).then(function (response) {
+
+                    _this.onDataLoading = false;
+
+                    if (response.data.code === 1) {
+
+                        let newData = response.data.data.data.data;
+                        _this.total = parseInt(response.data.data.data.total);
+                        _this.goMore = false;
+                        if(_this.page == 1){
+                            _this.goMore = _this.total > 10 ?  true : false;
+                            _this.tableData = newData
+                        }else{
+                            _this.goMore = newData.length > 9 ?  true : false;                            
+                            let oldData = _this.tableData
+                            for (var i = 0; i < newData.length; i++) {
+                                oldData.push(newData[i])
+                            }
+                            _this.tableData = oldData
+                        }
+                    } else {
+
+                        _this.$message({
+
+                            message: response.data.msg,
+
+                            type: 'warning'
+
+                        });
+
+                    }
+
+                }).catch(function (error) {
+
+                    _this.onDataLoading = false;
+
+                    _this.$message.error(error.toString())
+
+                })
+
+            }
+
+        },
+        watch: {
+            page(newPage, oldPage) {
+                this.getData()
+            }
+        },
+
+    })
+
+</script>
+
+</html>

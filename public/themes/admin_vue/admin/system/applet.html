@@ -1,0 +1,144 @@
+<include file="public@header_vue"/>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card" style="height:500px;">
+        <el-tab-pane label="小程序设置" v-loading="onDataLoading">
+
+            <el-form ref="form" :model="form" :rules="rules" ref="form" label-width="100px">
+
+                <el-form-item label="APPID" prop="appid">
+                    <el-col :span="12">
+                    <el-input v-model="form.appid" placeholder="请输入appid"></el-input>
+                    </el-col>
+                </el-form-item>
+
+                <el-form-item label="SECRET" prop="secret">
+                    <el-col :span="12">
+                    <el-input v-model="form.secret" placeholder="请输入secret"></el-input>
+                    </el-col>
+                </el-form-item>
+
+            </el-form>
+
+            <el-button class="btn" type="primary" @click="submit('form')">保存</el-button>
+
+        </el-tab-pane>
+
+
+    </el-tabs>
+
+
+</div>
+</body>
+<style>
+    .bg-purple-dark {
+        background: #D7D7D7;
+        line-height: 32px;
+        padding: 0px 10px;
+    }
+
+    .grid-content {
+        border-radius: 4px;
+        min-height: 36px;
+    }
+    .input_label{margin-top: 20px;}
+    .btn{margin-top: 100px;margin-left: 100px;}
+</style>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                form: {
+                    appid: '',
+                    secret:'',
+                },
+
+                rules:{
+                    appid: [
+                        { required: true, message: '请输入appid', trigger: 'blur' },
+                    ],
+                    secret: [
+                        { required: true, message: '请输入secret', trigger: 'blur' },
+                    ],
+                },
+                onDataLoading:false,
+            }
+        },
+        created() {
+            this.fetchData();//用于当前 Vue 实例的初始化选项
+        },
+        methods: {  //触发当前实例上的事件。附加参数都会传给监听器回调
+
+            submit(form) {
+                let _this = this;
+                let appid = this.form.appid;
+                let secret = this.form.secret;
+                this.$refs[form].validate((valid) => {
+                    if (valid) {
+                        this.onDataLoading = true;
+                        axios.post('/admin/System/do_applet', {appid:appid,secret:secret}, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                            }
+                        }).then(function (response) {
+
+                            _this.onDataLoading = false;
+                            if (response.data.code === 1) {
+                                _this.$message({
+                                    message: '保存成功！',
+                                    type: 'success'
+                                });
+                                _this.onDataLoading = false;
+                                _this.fetchData();
+                            } else {
+                                _this.$message({
+                                    message: response.data.msg,
+                                    type: 'warning'
+                                });
+                            }
+                        }).catch(function (error) {
+                            _this.dialogLoading = false;
+                            _this.$message.error(error.toString())
+                        })
+                    } else {
+                        //console.log('error submit!!');
+                        return false;
+                    }
+                });
+
+            },
+
+            fetchData () {
+                let _this = this;
+                this.onDataLoading = true;
+
+                axios.get('/admin/System/applet', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                }).then(function (response) {
+
+                    _this.onDataLoading = false;
+
+                    if (response.data.code === 1) {
+                        _this.form.appid  = response.data.data.appid;
+                        _this.form.secret = response.data.data.secret;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+
+
+        }
+    })
+</script>
+</html>

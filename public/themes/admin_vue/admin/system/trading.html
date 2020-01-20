@@ -1,0 +1,195 @@
+<include file="public@header_vue"/>
+</head>
+<body>
+<div id="app">
+    <el-card header="运营数据" v-loading="onDataLoading" style="margin-bottom: 200px;">
+
+        <el-form ref="form" :model="form" label-width="140px">
+            <el-form-item label="会员折扣：">
+                <el-col :span="8">
+                    <el-input v-model="form.member_discount" placeholder="请输入会员折扣" oninput="value=value.replace(/[^0-9.]/g,'')"></el-input>
+                </el-col>
+                <el-button type="primary" @click="memberSubmit()" style="margin-left: 40px;">保存</el-button>
+            </el-form-item>
+
+
+            <el-form-item label="经销商折扣：">
+                <el-col :span="8">
+                    <el-input v-model="form.dealers_discount" placeholder="请输入经销商折扣" oninput="value=value.replace(/[^0-9.]/g,'')"></el-input>
+                </el-col>
+                <el-button type="primary" @click="jxsSubmit()" style="margin-left: 40px;">保存</el-button>
+            </el-form-item>
+
+            <el-alert title="奖励比例" type="warning" :closable="false" style="margin-bottom: 20px;"></el-alert>
+
+            <el-form-item label="推荐奖励比例：">
+                <el-col :span="8">
+                    <el-input v-model="form.recommended_reward_ratio" placeholder="请输入推荐奖励比例" oninput="value=value.replace(/[^0-9.]/g,'')"></el-input>
+                </el-col>
+                <el-button type="primary" @click="tuijianSubmit()" style="margin-left: 40px;">保存</el-button>
+            </el-form-item>
+
+
+            <el-alert title="会员门槛设置" type="warning" :closable="false" style="margin-bottom: 20px;"></el-alert>
+
+
+            <el-form-item label="一次性消费金额：">
+                <el-col :span="8">
+                    <el-input v-model="form.one_time_buy" placeholder="请输入一次性消费金额" oninput="value=value.replace(/[^0-9.]/g,'')"></el-input>
+                </el-col>
+                <el-button type="primary" @click="buySubmit()" style="margin-left: 40px;">保存</el-button>
+            </el-form-item>
+
+
+            <el-form-item label="一次性充值金额：">
+                <el-col :span="8">
+                    <el-input v-model="form.one_time_chongzhi" placeholder="请输入一次性充值金额" oninput="value=value.replace(/[^0-9.]/g,'')"></el-input>
+                </el-col>
+                <el-button type="primary" @click="chongzhiSubmit()" style="margin-left: 40px;">保存</el-button>
+            </el-form-item>
+
+
+
+        </el-form>
+
+
+    </el-card>
+</div>
+</body>
+<script>
+var app = new Vue({
+    el: '#app',
+    data: function () {
+        return {
+            form: {
+                member_discount :{$member_discount},//会员折扣 member_discount
+                dealers_discount:{$dealers_discount},//经销商折扣
+                recommended_reward_ratio:{$recommended_reward_ratio},//推荐奖励比例
+                one_time_buy:{$one_time_buy},//一次性消费金额
+                one_time_chongzhi:{$one_time_chongzhi},//一次性充值金额
+
+
+            },
+            options: [5, 10, 20, 30, 40, 50],
+            onDataLoading:false,
+        }
+    },
+    methods: {
+
+        created () {
+
+        },
+
+        memberSubmit() {
+
+            let _this = this;
+            this.onDataLoading = true;
+            axios.post('/admin/System/trading', {member_discount : this.form.member_discount }, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.$message.success('保存成功');
+                    _this.onDataLoading = false;
+                } else {
+                    _this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+
+        jxsSubmit() {
+
+            let _this = this;
+            this.onDataLoading = true;
+            axios.post('/admin/System/trading', {dealers_discount : this.form.dealers_discount}, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.$message.success('保存成功');
+                    _this.onDataLoading = false;
+                } else {
+                    _this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+
+        tuijianSubmit() {
+
+            let _this = this;
+            this.onDataLoading = true;
+            axios.post('/admin/System/trading', {recommended_reward_ratio : this.form.recommended_reward_ratio }, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.$message.success('保存成功');
+                    _this.onDataLoading = false;
+                } else {
+                    _this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+
+        buySubmit() {
+
+            let _this = this;
+            this.onDataLoading = true;
+            axios.post('/admin/System/trading', {one_time_buy:this.form.one_time_buy}, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.$message.success('保存成功');
+                    _this.onDataLoading = false;
+                } else {
+                    _this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+
+        chongzhiSubmit() {
+
+            let _this = this;
+            this.onDataLoading = true;
+            axios.post('/admin/System/trading', {one_time_chongzhi : this.form.one_time_chongzhi }, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.$message.success('保存成功');
+                    _this.onDataLoading = false;
+                } else {
+                    _this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+    }
+})
+</script>
+</html>

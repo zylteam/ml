@@ -1,0 +1,380 @@
+<include file="public@header_vue"/>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="广告位列表" v-loading="onDataLoading">
+            <!-- <el-button @click="fetchData">查询</el-button> -->
+
+            <el-button :span="4" type="primary" size="mini" style="float: right" @click="edit(null)">新增</el-button>
+
+
+            <el-table :data="tableData" style="width: 100%">
+
+                <el-table-column prop="id" label="广告编号" width="80"></el-table-column>
+                <el-table-column prop="title" label="广告标题"></el-table-column>
+                <el-table-column prop="position.title" label="所属位置" min-width="100"></el-table-column>
+                <el-table-column prop="img" label="图片" width="200">
+                    <template slot-scope="scope">
+                        <img :src="scope.row.img" class="img" height="70">
+                    </template>
+
+                </el-table-column>
+
+                <el-table-column prop="sort" label="排序"></el-table-column>
+
+                <el-table-column prop="status" label="是否启用">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.status === 1">启用</span>
+                        <span v-else>禁用</span>
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="type" label="类型" width="200">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.type === 0">文章id</span>
+                        <span v-if="scope.row.type === 2">内部链接</span>
+                        <span v-else>无</span>
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="adv_url" label="链接url" min-width="170"></el-table-column>
+
+                <el-table-column prop="add_time" label="添加时间" min-width="160"></el-table-column>
+
+                <el-table-column label="操作" width="250">
+                    <template slot-scope="scope">
+
+                        <el-button size="mini" type="primary" @click="edit(scope.row)">编辑</el-button>
+
+                        <el-button size="mini" type="danger" v-loading.del="loadingnext" @click="remove(scope.row.id)">
+                            删除
+                        </el-button>
+
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :page-size="15" :total="totalNum"
+                           :current-page.sync="currentPage" @current-change="fetchData">
+            </el-pagination>
+        </el-tab-pane>
+
+        <!--:visible.sync="dialogVisible" 这是弹层的修饰符    v-loading.fullscreen="layerloading"是弹层ajax提交时候的懒加载,v-loading必须写在顶层-->
+
+        <el-dialog :visible.sync="dialogVisible" v-loading.fullscreen="layerloading">
+            <el-form label-width="100px">
+                <el-form-item label="广告标题">
+                    <el-col :span="12">
+                        <el-input v-model="editForm.title" placeholder="请输入广告标题"></el-input>
+                </el-form-item>
+
+
+                <el-form-item label="广告位置">
+                    <el-select placeholder="请选择地址" v-model="editForm.adv_id">
+                        <el-option v-for="item in position" :key="item.id" :label="item.title"
+                                   :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
+
+
+                <el-form-item label="类型">
+                    <el-select v-model="editForm.type">
+                        <el-option v-for="(type, index) in type" :value="index" :label="type" :key="index"></el-option>
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="文章id" v-if="editForm.type == 0">
+                    <el-col :span="12">
+                        <el-input v-model="editForm.adv_url" placeholder="请输入文章id"></el-input>
+                </el-form-item>
+                <el-form-item label="内部链接" v-if="editForm.type == 2">
+                    <el-col :span="12">
+                        <el-input v-model="editForm.adv_url" placeholder="内部链接"></el-input>
+                </el-form-item>
+                <el-form-item label="排序">
+                    <el-col :span="12">
+                        <el-input v-model="editForm.sort" placeholder="请输入排序" @keyup.native="proving1"></el-input>
+                </el-form-item>
+
+                <!--Vue.js的v-model的双向数据绑定-->
+                <el-form-item label="是否启用" v-if="editForm.id !== ''">
+                    <el-select v-model="editForm.status" placeholder="请选择是否启用">
+                        <el-option label="启用" :value="1"></el-option>
+                        <el-option label="禁用" :value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="图片" prop="logo">
+                    <el-col :span="18">
+                        <el-upload
+                                class="avatar-uploader"
+                                action="http://ml.0513app.cn/api/upload/upload"
+                                :show-file-list="false"
+                                :on-success="handleAvatarSuccess"
+                                :before-upload="beforeAvatarUpload">
+                            <img v-if="editForm.img" :src="editForm.img" class="avatar">
+                            <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                        </el-upload>
+                    </el-col>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+            <el-button v-if="editForm.id === ''" type="primary" @click="submit()">新增</el-button>
+            <el-button v-else type="primary" @click="submit()">修改</el-button>
+        </span>
+        </el-dialog>
+
+    </el-tabs>
+</div>
+</body>
+<style>
+    .el-pagination {
+        margin-top: 20px;
+    }
+
+    .el-collapse {
+        margin-top: 10px;
+    }
+
+    .detil-item {
+        padding: 20px 0px;
+    }
+
+    .left-span {
+        width: 100px;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .avatar-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 178px;
+        height: 178px;
+        line-height: 178px;
+        text-align: center;
+    }
+
+    .avatar {
+        width: 178px;
+        height: 178px;
+        display: block;
+    }
+
+</style>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                tableData: [],
+                position: [],
+                type: ['文章id', '无','内部链接'],
+                currentPage: 1,
+                totalNum: 0,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                dialogVisible: false,
+                editForm: {
+                    id: '',
+                    title: '',
+                    type: '',
+                    organ_id: '',
+                    curriculum_id: '',
+                    adv_url: '',
+                    sort: '',
+                    status: '',
+                    position: [],
+                    img: '',
+                    pixel: '',
+                },
+                isLoading: false,
+                fetchError: null,
+                onDataLoading: false,//懒加载初始化
+                layerloading: false,
+                loadingnext: false
+            }
+        },
+        created() {
+            this.fetchData();//用于当前 Vue 实例的初始化选项
+        },
+        methods: {  //触发当前实例上的事件。附加参数都会传给监听器回调
+
+
+            //验证只能输入正整数
+            proving1() {
+                this.editForm.sort = this.editForm.sort.replace(/[^\.\d]/g, '');
+                this.editForm.sort = this.editForm.sort.replace('.', '');
+            },
+
+            proving2() {
+                this.editForm.organ_id = this.editForm.organ_id.replace(/[^\.\d]/g, '');
+                this.editForm.organ_id = this.editForm.organ_id.replace('.', '');
+            },
+
+            proving3() {
+                this.editForm.curriculum_id = this.editForm.curriculum_id.replace(/[^\.\d]/g, '');
+                this.editForm.curriculum_id = this.editForm.curriculum_id.replace('.', '');
+            },
+
+            logoUploadSuccess(res, file) {
+                console.log(res)
+                if (res.code === 1) {
+                    this.editForm.img = res.data.url;
+                    console.log(this.editForm.img);
+                } else {
+                    this.$message.error(res.msg);
+                }
+            },
+            handleAvatarSuccess(res, file) {
+                console.log(res.url)
+                this.imageUrl = URL.createObjectURL(file.raw);
+                this.editForm.img = res.url;
+            },
+            beforeAvatarUpload(file) {
+                const isJPG = file.type === 'image/jpeg';
+                const isLt2M = file.size / 1024 / 1024 < 2;
+
+                if (!isJPG) {
+                    this.$message.error('上传头像图片只能是 JPG 格式!');
+                }
+                if (!isLt2M) {
+                    this.$message.error('上传头像图片大小不能超过 2MB!');
+                }
+                return isJPG && isLt2M;
+            },
+
+            fetchData: function () {
+                var self = this;
+                this.onDataLoading = true;//懒加载
+                axios.get('/admin/adv/advlist', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                })
+                    .then(function (response) {
+                        self.onDataLoading = false;
+                        console.log(response);
+                        self.tableData = response.data.data.list;
+                        self.totalNum = response.data.data.count;
+
+                        self.position = response.data.data.adv_address;
+                    })
+                    .catch(function (error) {
+                        self.onDataLoading = false;
+                        self.fetchError = error
+                    })
+            },
+            edit(row) {
+                if (row == null) {
+
+                    this.editForm = {
+                        id: '',
+                        title: '',
+                        type: '',
+                        organ_id: '',
+                        curriculum_id: '',
+                        adv_url: '',
+                        sort: '',
+                        status: '',
+                        position: '',
+                        position_id: '',
+                        img: '',
+                        pixel: ''
+                    };
+
+                } else {
+                    this.editForm = JSON.parse(JSON.stringify(row));//深拷贝
+                }
+
+                console.log(this.editForm);
+                this.dialogVisible = true;
+            },
+            submit() {
+                const bianliang = this.editForm;
+                console.log(bianliang);
+
+                this.layerloading = true;
+
+                const self = this;
+
+                axios.post('/admin/adv/set_advlist', this.editForm, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                })
+                    .then(function (response) {
+                        self.layerloading = false;
+                        console.log(response);
+
+                        if (response.data.code == 1) {
+                            self.dialogVisible = false;//关闭弹层
+                            self.$message.success(response.data.msg);
+                            self.fetchData();
+                        } else {
+                            self.$message.warning(response.data.msg);
+                            self.fetchData();
+                        }
+
+                    })
+                    .catch(function (error) {
+                        self.layerloading = false;
+                        self.$message.error(error.toString());
+                        // self.fetchError = error
+                    })
+            },
+
+
+            remove(id) {
+                let _this = this;
+                this.$confirm('此操作将永久删除该条目, 是否继续?', '警告', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.loadingnext = true;
+                    axios.delete('/admin/adv/delete_advlist', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        params: {id: id}
+                    }).then(function (response) {
+                        console.log(response);
+                        _this.loadingnext = false;
+                        if (response.data.code === 1) {
+                            _this.$message({
+                                message: '删除成功',
+                                type: 'success'
+                            });
+                            _this.fetchData();
+                        } else {
+                            _this.$message({
+                                message: response.data.msg,
+                                type: 'warning'
+                            });
+                        }
+                    }).catch(function (error) {
+                        _this.loadingnext = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+
+
+        }
+    })
+</script>
+</html>

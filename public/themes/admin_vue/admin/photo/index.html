@@ -1,0 +1,328 @@
+<include file="public@header_vue"/>
+<style>
+    .demo-image .block {
+        padding: 30px 0;
+        text-align: center;
+        border-right: 1px solid #eff2f6;
+        display: inline-block;
+        width: 19%;
+        box-sizing: border-box;
+        vertical-align: top;
+    }
+
+    .el-image {
+        position: relative;
+        display: inline-block;
+        overflow: hidden;
+    }
+
+    .demo-image .demonstration {
+        display: block;
+        color: #8492a6;
+        font-size: 14px;
+        margin-top: 20px;
+    }
+
+    .source {
+        padding: 24px;
+        border: 1px solid #ebebeb;
+        border-radius: 3px;
+        transition: .2s;
+    }
+
+    .avatar {
+        width: 40px;
+        height: auto;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .avatar-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 178px;
+        height: 178px;
+        line-height: 178px;
+        text-align: center;
+    }
+
+    .avatar {
+        width: 178px;
+        height: 178px;
+        display: block;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+</style>
+</head>
+<body>
+<div id="app">
+    <div class="source">
+        <div class="demo-image">
+            <div class="block" v-for="(data,index) in tableData" :key="index" @click="click_dd(data)">
+                <el-image
+                        style="width: 100px; height: 100px;cursor: pointer"
+                        :src="data.head_img"
+                        fit="fill"></el-image>
+                <span class="demonstration">{{ data.nickname }}({{data.photos_count}})</span>
+            </div>
+        </div>
+    </div>
+    <el-pagination background layout="total,prev, pager, next" :total="totalNum" :page-size="10"
+                   :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+    <el-dialog :title="officer_title" :visible.sync="dialogPhotoVisible" v-loading.fullscreen="dialogLoading"
+               width="100%">
+        <el-button type="primary" plain @click="addNewPic">新增图片</el-button>
+        <div class="source">
+            <div class="demo-image">
+                <div class="block" v-for="(data,index) in photoData" :key="index">
+                    <el-image
+                            style="width: 100px; height: 100px"
+                            :src="data.img_src"
+                            :preview-src-list="photoList"
+                    ></el-image>
+                    <span class="demonstration" @click="delete_photo(data)">删除</span>
+                </div>
+            </div>
+        </div>
+        <el-pagination background layout="total,prev, pager, next" :total="photoNum" :page-size="10"
+                       :current-page.sync="currentPhotoPage" @current-change="getPhotoData"></el-pagination>
+    </el-dialog>
+    <el-dialog :title="upload_officer_title" :visible.sync="dialogUploadPhotoVisible"
+               v-loading.fullscreen="dialogLoading"
+               width="50%">
+        <el-form :model="photo_form" class="demo-form-inline" ref="photo_form"
+                 label-width="130px">
+            <el-form-item label="上传图片" prop="img_src">
+                <el-col :span="18">
+                    <el-upload
+                            class="avatar-uploader"
+                            action="{:url('api/upload/upload')}"
+                            :show-file-list="false"
+                            :on-success="handleAvatarSuccess"
+                            :before-upload="beforeAvatarUpload">
+                        <img v-if="photo_form.img_src" :src="photo_form.img_src" class="avatar"/>
+                        <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                    </el-upload>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="备注" prop="remark">
+                <el-col :span="24">
+                    <el-input v-model="photo_form.remark" placeholder="备注"></el-input>
+                </el-col>
+            </el-form-item>
+
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submit('photo_form')">确定</el-button>
+        </span>
+    </el-dialog>
+</div>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                onDataLoading: false,
+                tableData: [],
+                totalNum: 0,
+                dialogPhotoVisible: false,
+                dialogLoading: false,
+                currentPage: 1,
+                photoData: [],
+                photoNum: 0,
+                currentPhotoPage: 1,
+                officer_title: '',
+                officer_id: 0,
+                upload_officer_title: '',
+                dialogUploadPhotoVisible: false,
+                imageUrl: '',
+                photo_form: {
+                    img_src: '',
+                    remark: '',
+                    officer_id: 0,
+                },
+                url: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
+                photoList: [],
+                photo_rules: {
+                    img_src: [{required: true, message: '请上传相册图片', trigger: 'blur'}],
+                },
+            };
+        },
+        created() {
+            this.getData();
+        },
+        methods: {
+            clearForm() {
+                this.form = {
+                    name: '',
+                }
+            },
+            delete_photo(data) {
+                let _this = this;
+                axios.post('/admin/photo/delete', {id: data.id}, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.photoData.splice(_this.photoData.indexOf(data),1);
+                        _this.$message.success('删除完成');
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            getData(page = 1) {
+                let _this = this;
+                let params = {page: page};
+                _this.onDataLoading = true;
+                axios.get("{:url('admin/photo/get_all_officer')}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.list;
+                        _this.totalNum = response.data.data.count;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            getPhotoData(page = 1) {
+                let _this = this;
+                _this.dialogLoading = true;
+                let params = {id: _this.officer_id, page: page}
+                axios.get("{:url('admin/photo/get_officer_by_id')}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        console.log(response.data.data)
+                        let list = response.data.data.list;
+                        _this.photoList = [];
+                        for (let i in list) {
+                            _this.photoList.push("http://ml.0513app.cn" + list[i].img_src)
+                        }
+                        console.log(_this.photoList)
+                        _this.photoData = list;
+                        _this.photoNum = response.data.data.count;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            handleAvatarSuccess(res, file) {
+                console.log(res.url)
+                this.imageUrl = URL.createObjectURL(file.raw);
+                this.photo_form.img_src = res.url;
+            },
+            beforeAvatarUpload(file) {
+                console.log(file.type)
+                const isJPG = file.type === 'image/jpeg' || 'image/png';
+                const isLt2M = file.size / 1024 / 1024 < 10;
+                if (!isJPG) {
+                    this.$message.error('上传头像图片只能是 JPG 格式或者PNG格式!');
+                }
+                if (!isLt2M) {
+                    this.$message.error('上传头像图片大小不能超过 2MB!');
+                }
+                return isJPG && isLt2M;
+            },
+            submit(form) {
+                let _this = this;
+                if (form == 'photo_form') {
+                    _this.dialogLoading = true;
+                    _this.$refs[form].validate((valid) => {
+                        console.log(_this.diary_form)
+                        if (valid) {
+                            axios.post("{:url('admin/photo/update')}", _this.photo_form, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            }).then(function (response) {
+                                _this.dialogLoading = false;
+                                if (response.data.code === 1) {
+                                    _this.$message.success('新增完成');
+                                    _this.dialogUploadPhotoVisible = false;
+                                    _this.getData();
+                                    _this.getPhotoData();
+                                } else {
+                                    _this.$message.warning(response.data.msg);
+                                }
+                            }).catch(function (error) {
+                                _this.dialogLoading = false;
+                                _this.$message.error(error.toString())
+                            })
+                        } else {
+                            console.log('error submit!!');
+                            _this.dialogLoading = false;
+                            return false;
+                        }
+                    });
+                }
+            },
+            click_dd(data) {
+                if (data) {
+                    let _this = this;
+                    _this.officer_title = "查看" + data.nickname + "的相冊";
+                    _this.dialogPhotoVisible = true;
+                    _this.officer_id = data.id;
+                    _this.photo_form.officer_id = data.id;
+                    _this.getPhotoData();
+                }
+
+            },
+            addNewPic() {
+                this.dialogUploadPhotoVisible = true;
+                this.photo_form.img_src = '';
+                this.photo_form.remark = '';
+
+            }
+        },
+    });
+</script>
+</body>

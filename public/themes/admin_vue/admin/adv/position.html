@@ -1,0 +1,205 @@
+<include file="public@header_vue"/>
+</head>
+<body>
+<div id="app">
+<el-tabs type="border-card">
+    <el-tab-pane label="广告位置" v-loading="onDataLoading">
+
+        <el-button :span="4" type="primary" size="mini" style="float: right" @click="edit(null)">新增</el-button>
+        
+        <el-table :data="tableData" style="width: 100%">
+            <el-table-column prop="id" label="位置编号" width="50"></el-table-column>
+            <el-table-column prop="title" label="说明"></el-table-column>
+            <el-table-column prop="num" label="容量">
+                <template slot-scope="scope">
+                    {{scope.row.num}}({{scope.row.advlists_count}})
+                </template>
+            </el-table-column>
+            <el-table-column prop="pixel" label="像素"></el-table-column>
+
+            <el-table-column prop="status" label="状态">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.status === 0">暂停</span>
+                    <span v-else>启用</span>
+                </template>
+            </el-table-column>
+            
+            <el-table-column prop="add_time" label="添加时间"></el-table-column>
+            <el-table-column label="操作" fixed="right" width="150">
+                <template slot-scope="scope">
+                    <el-button size="mini" type="primary" @click="edit(scope.row)">修改</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+    </el-tab-pane>
+</el-tabs>
+<el-dialog :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading">
+    <span v-if="editForm.id === ''" slot="title" class="dialog-footer">新增广告位</span>
+    <span v-else slot="title" class="dialog-footer">修改广告位</span>
+    <el-form :model="form" class="demo-form-inline" label-width="100px">
+        <el-form-item label="广告位名称">
+            <el-col :span="10">
+                <el-input v-model="editForm.title" placeholder="请输入广告位名称"></el-input>
+            </el-col>
+            
+        </el-form-item>
+        <el-form-item label="容量">
+        <el-col :span="10">
+                <el-input v-model="editForm.num" placeholder="请输入容量" @keyup.native="proving1"></el-input>
+        </el-col>
+        </el-form-item>
+        <!--Vue.js的v-model的双向数据绑定-->
+        <el-form-item label="是否启用" v-if="editForm.id !== ''">
+            <el-select v-model="editForm.status" placeholder="请选择是否启用">
+                <el-option label="启用" :value="1"></el-option>
+                <el-option label="禁用" :value="0"></el-option>
+            </el-select>
+        </el-form-item>
+    </el-form>
+    <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submit()">提交</el-button>
+    </span>
+</el-dialog>
+</div>
+</body>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+<script>
+var app = new Vue({
+    el: '#app',
+    data: function() {
+        return {
+            tableData: [],
+            onDataLoading: false,
+            totalNum: 0,
+            currentPage: 1,
+            form: {
+                name: ''
+            },
+            editForm: {
+                id: '',
+                title: '',
+                num: '',
+                status: ''
+            },
+            dialogVisible: false,
+            dialogLoading: false
+        }
+    },
+    created () {
+      this.getData();
+    },
+    methods: {
+        clearForm () {
+            this.form = {
+                name: ''
+            }
+        },
+
+
+        //验证只能输入正整数      
+      proving1(){        
+        this.editForm.num = this.editForm.num.replace(/[^\.\d]/g,'');        
+        this.editForm.num = this.editForm.num.replace('.','');      
+    },
+
+
+        getData (page = 1) {
+            let _this = this;
+            let params = {page: page};
+            this.onDataLoading = true;
+            if (this.form.name !== '') {
+                params.name = this.form.name;
+            }
+            axios.get('/admin/Adv/position', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then(function (response) {
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.tableData = response.data.data.list;
+                    _this.totalNum = response.data.data.count;
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        edit(row) {
+            if (row) {
+                this.editForm = JSON.parse(JSON.stringify(row));
+            } else {
+                this.editForm = {
+                    id: '',
+                    title: ''
+                };
+            }
+            this.dialogVisible = true;
+        },
+        submit() {
+            let _this = this;
+            this.dialogLoading = true;
+            axios.post('/admin/Adv/set_adv', this.editForm, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then(function (response) {
+                _this.dialogLoading = false;
+                if (response.data.code === 1) {
+                    if (_this.editForm.id === '') {
+                        _this.$message.success('新增完成');
+                    } else {
+                        _this.$message.success('修改成功');
+                    }
+                    _this.lv1Category = response.data.data;
+                    _this.dialogVisible = false;
+                    _this.getData();
+                } else {
+                    _this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                _this.dialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        del (openid) {
+            let _this = this;
+            this.$confirm('此操作将永久删除该条目, 是否继续?', '警告', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.onDataLoading = true;
+                axios.delete('/admin/goods/unitDel', {
+                    params: {openid: openid}
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('删除成功');
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            }).catch(() => {
+                this.$message.info('已取消删除');
+            });
+        }
+    }
+})
+</script>
+</html>

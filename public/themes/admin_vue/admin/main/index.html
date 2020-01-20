@@ -1,0 +1,572 @@
+<include file="public@header_vue"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.20.3/TweenMax.min.js"></script>
+<link href="__STATIC__/font-awesome/css/font-awesome.min.css?page=index" rel="stylesheet" type="text/css">
+<hook name="admin_before_head_end"/>
+</head>
+<style>
+    .el-row {
+        margin-bottom: 20px;
+
+    &
+    :last-child {
+        margin-bottom: 0;
+    }
+
+    }
+    .el-col {
+        border-radius: 4px;
+    }
+
+    .bg-purple-dark {
+        background: #99a9bf;
+    }
+
+    .bg-purple {
+        background: #d3dce6;
+    }
+
+    .bg-purple-light {
+        background: #e5e9f2;
+    }
+
+    .grid-content {
+        border-radius: 4px;
+        min-height: 36px;
+    }
+
+    .row-bg {
+        padding: 10px 0;
+        background-color: #f9fafc;
+    }
+
+    [v-cloak] {
+        display: none;
+    }
+
+</style>
+<body>
+<el-main id="app" v-cloak>
+
+<!--    <el-row v-loading="onDataLoading">-->
+<!--        <template>-->
+<!--            &lt;!&ndash;原生的js的模板字符串&ndash;&gt;-->
+<!--                <el-alert v-cloak :title="`平台已上线 ${dayNum.toFixed(0)} 天，上线日期：${shangxian_date}`" type="success"-->
+<!--                      :closable="false"></el-alert>-->
+
+<!--        </template>-->
+<!--    </el-row>-->
+
+    <el-form :inline="true" :model="allForm" class="demo-form-inline" size="mini">
+        <el-form-item label="请选择">
+            <el-select v-model="allForm.id" placeholder="请选择">
+
+                <el-option v-cloak v-for="item in storeData" :key="item.id" :label="item.name"
+                           :value="item.id"></el-option>
+
+            </el-select>
+        </el-form-item>
+
+
+        <el-form-item>
+            <el-button type="primary" @click="topData()" v-cloak>查询</el-button>
+        </el-form-item>
+    </el-form>
+
+
+    <el-row :gutter="40">
+
+        <el-col :span="6">
+            <el-card>
+                <el-row class="data-count">
+                    <el-col v-cloak :span="12" class="data-count-icon"><i class="fa fa-shopping-cart normal"></i>
+                    </el-col>
+                    <el-col v-cloak :span="12" class="data-count-databox">
+                        <span class="data-count-title" v-cloak>今日新增会员数</span><br>
+                        <!--<span class="data-count-data">+{{today_order}}</span>-->
+                        <span class="data-count-data" v-cloak>+{{today_order.toFixed(0)}}</span>
+                    </el-col>
+                    <el-col :span="15">
+                        <!--<span>相较昨日增长{{add_pie}}%</span>-->
+                        <span v-cloak>总会员数{{all_user_count.toFixed(0)}}</span>
+                    </el-col>
+                </el-row>
+            </el-card>
+        </el-col>
+        <el-col :span="6">
+            <el-card>
+                <el-row class="data-count" v-cloak>
+                    <el-col :span="12" class="data-count-icon"><i class="fa fa-cart-plus normal"></i></el-col>
+                    <el-col :span="12" class="data-count-databox">
+                        <span class="data-count-title" v-cloak>本月销售额</span><br>
+                        <!--<span class="data-count-data">+{{thismonth_order}}</span>-->
+                        <span class="data-count-data" v-cloak>+{{thismonth_order.toFixed(0)}}</span>
+                    </el-col>
+                    <el-col :span="15">
+                        <!--<span>相较上月增长{{shang_month_pie}}%</span>-->
+                        <span v-cloak>相较上月增长{{shang_month_pie.toFixed(0)}}%</span>
+                    </el-col>
+                </el-row>
+            </el-card>
+        </el-col>
+        <el-col :span="6">
+            <el-card>
+                <el-row class="data-count" v-cloak>
+                    <el-col :span="12" class="data-count-icon"><i class="fa fa-cart-arrow-down normal"></i></el-col>
+                    <el-col :span="12" class="data-count-databox">
+                        <span class="data-count-title" v-cloak>今年销售额</span><br>
+                        <!--<span class="data-count-data">{{thisyear_order}}</span>-->
+                        <span class="data-count-data" v-cloak>{{thisyear_order.toFixed(0)}}</span>
+                    </el-col>
+                    <el-col :span="15">
+                        <!--<span>相较去年增长{{year_pie}}%</span>-->
+                        <span v-cloak>相较去年增长{{year_pie.toFixed(0)}}%</span>
+                    </el-col>
+                </el-row>
+            </el-card>
+        </el-col>
+
+    </el-row>
+
+    <el-form :inline="true" :model="form" class="demo-form-inline" size="mini" style="margin-top: 50px;">
+
+        <el-form-item label="时间：">
+            <el-date-picker v-model="form.date" type="month" placeholder="请选择年月（默认为当前月）"
+                            value-format="timestamp"></el-date-picker>
+        </el-form-item>
+
+        <el-form-item label="会员身份：">
+            <el-select v-model="form.user_type" placeholder="请选择">
+                <el-option v-cloak v-for="(item,index) in user_type" :key="index" :label="item.name"
+                           :value="item.id"></el-option>
+            </el-select>
+        </el-form-item>
+        <el-form-item label="状态：">
+            <el-select v-model="form.user_status" placeholder="请选择">
+                <el-option v-cloak v-for="(item,index) in user_status" :label="item.name"
+                           :value="item.value"></el-option>
+            </el-select>
+        </el-form-item>
+
+        <el-form-item v-cloak>
+            <el-button type="danger" @click="clearForm()">清空</el-button>
+            <el-button type="primary" @click="fetchData()">查询</el-button>
+        </el-form-item>
+
+    </el-form>
+
+    <div>
+        <div id="line-echar" style="height:500px;">
+        </div>
+    </div>
+</el-main>
+<hook name="admin_before_body_end"/>
+</body>
+<style>
+    .el-alert {
+        margin-bottom: 10px;
+    }
+
+    .data-count {
+        height: 100px;
+    }
+
+    .data-count-icon {
+        font-size: 64px;
+        height: 100px;
+        line-height: 100px;
+        text-align: center;
+    }
+
+    .data-count-databox {
+        height: 100px;
+        padding: 20px 0;
+        text-align: right;
+    }
+
+    .data-count-title {
+        display: inline-block;
+        height: 20px;
+        line-height: 20px;
+        font-size: 14px;
+    }
+
+    .data-count-data {
+        display: inline-block;
+        height: 40px;
+        line-height: 40px;
+        font-size: 30px;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    .chart canvas {
+        margin-left: auto;
+        margin-right: auto;
+    }
+</style>
+<script type="text/javascript" src="/echarts/echarts.js"></script>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                user_type: [{
+                    'id': 2,
+                    'name': '普通会员'
+                }, {
+                    'id': 3,
+                    'name': '会员'
+                }, {
+                    'id': 4,
+                    'name': '经销商'
+                }],
+                user_status: [{
+                    'value': '0',
+                    'name': '停业'
+                }, {
+                    'value': 1,
+                    'name': '开业'
+                }],
+                session_admin_id: 1,
+                //绑定选中值
+                storeData: [],
+
+                allForm: {
+                    id: 0,
+                },
+
+                shangxian_date: '',
+
+                form: {
+                    date: '',
+                    user_type: '',
+                    user_status: ''
+                },
+                shop_form: {
+                    date: '',
+                },
+                label: [],
+                number: [],
+                day: [],
+                price: [],
+                onDataLoading: false,
+                dayNum: 0,
+                today_order: 0,
+                add_pie: 0,
+                thismonth_order: 0,
+                shang_month_pie: 0,
+                thisyear_order: 0,
+                year_pie: 0,
+                all_user_count:0,
+            }
+        },
+        mounted() {
+            this.session_admin_id = JSON.parse('{$session_admin_id}');
+            this.all_user_count= JSON.parse('{$all_user_count}');
+        },
+        created() {
+
+        },
+        methods: {
+
+            clearForm() {
+                console.log(this.form);
+                this.form = {
+                    date: '',
+                    user_type: '',
+                    user_status: ''
+                }
+            },
+
+            clearShopForm() {
+                console.log(this.shop_form);
+                this.shop_form = {
+                    date: ''
+                }
+            },
+
+            getIndex(index) {
+                console.log(index);
+            },
+
+            topData() {
+                this.fetchAllData();
+                this.fetchData();
+                this.fetchShopData();
+            },
+
+            fetchAllData() {
+                let _this = this;
+                let id = this.allForm.id;
+
+                let user_type = '';
+                let user_status = '';
+
+                if (_this.form.user_type != '') {
+                    user_type = this.form.user_type;
+                }
+
+                if (_this.form.user_status != '') {
+                    user_status = this.form.user_status;
+                }
+
+                let params = {id: id, user_type: user_type, user_status: user_status};
+                this.onDataLoading = true;
+
+            },
+
+            chart() {
+                var myChart = echarts.init(document.getElementById('line-echar'));
+                option = {
+                    title: {
+                        text: '会员增长折线图',
+
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['新增会员']
+                    },
+                    toolbox: {
+                        padding: 30,
+                        show: true,
+                        feature: {
+                            dataZoom: {
+                                yAxisIndex: 'none'
+                            },
+                            dataView: {readOnly: false},
+                            magicType: {type: ['line', 'bar']},
+                            restore: {},
+                            saveAsImage: {}
+                        }
+                    },
+
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: this.label,
+                        "axisLabel": {
+                            interval: 1,
+                        }
+                    },
+
+                    grid: { // 控制图的大小，调整下面这些值就可以，
+                        x: 80,
+                        x2: 100,
+                        y2: 100// y2可以控制 X轴跟Zoom控件之间的间隔，避免以为倾斜后造成 label重叠到zoom上
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: {
+                            formatter: '{value}'
+                        }
+                    },
+                    series: [
+                        {
+                            name: '新增会员',
+                            type: 'line',
+                            data: this.number,
+                            markPoint: {
+                                data: [
+                                    {type: 'max', name: '最大值'},
+                                    {type: 'min', name: '最小值'}
+                                ]
+                            }
+
+                        },
+
+
+                    ]
+                };
+
+                myChart.setOption(option)
+            },
+
+            shopChart() {
+                var myChart = echarts.init(document.getElementById('line-echar-shop'));
+                option = {
+                    title: {
+                        text: '销售额折线图',
+
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['销售额']
+                    },
+                    toolbox: {
+                        padding: 30,
+                        show: true,
+                        feature: {
+                            dataZoom: {
+                                yAxisIndex: 'none'
+                            },
+                            dataView: {readOnly: false},
+                            magicType: {type: ['line', 'bar']},
+                            restore: {},
+                            saveAsImage: {}
+                        }
+                    },
+
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: this.day,
+                        "axisLabel": {
+                            interval: 1,
+                        }
+                    },
+
+                    grid: { // 控制图的大小，调整下面这些值就可以，
+                        x: 80,
+                        x2: 100,
+                        y2: 100// y2可以控制 X轴跟Zoom控件之间的间隔，避免以为倾斜后造成 label重叠到zoom上
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: {
+                            formatter: '{value}'
+                        }
+                    },
+                    series: [
+                        {
+                            name: '销售额',
+                            type: 'line',
+                            data: this.price,
+                            markPoint: {
+                                data: [
+                                    {type: 'max', name: '最大值'},
+                                    {type: 'min', name: '最小值'}
+                                ]
+                            }
+
+                        },
+
+
+                    ]
+                };
+
+                myChart.setOption(option)
+            },
+
+            getDayNum() {
+                var date = new Date(this.shangxian_date);
+
+                var onlineTime = date.getTime() / 1000;
+
+                const nowTime = Date.parse(new Date()) / 1000;
+
+                TweenLite.to(this.$data, 0.5, {dayNum: ((nowTime - onlineTime) / 86400).toFixed(0)});
+            },
+
+
+            fetchData() {
+                let _this = this;
+                let date = '';
+                let store_id = 0;
+
+                if (_this.form.date != '') {
+                    date = this.form.date;
+                }
+
+                if (_this.allForm.id != 0) {
+                    store_id = this.allForm.id;
+                }
+
+                let user_type = '';
+                let user_status = '';
+
+                if (_this.form.user_type != '') {
+                    user_type = this.form.user_type;
+                }
+
+                console.log(user_type);
+
+                if (_this.form.user_status != '') {
+                    user_status = this.form.user_status;
+                }
+
+                let params = {date: date, store_id: store_id, user_type: user_type, user_status: user_status};
+                this.onDataLoading = true;
+
+                axios.get('/admin/main/user_count', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+
+                    _this.onDataLoading = false;
+
+                    if (response.data.code === 1) {
+
+                        console.log(response);
+
+                        _this.label = response.data.data.label;
+                        _this.number = response.data.data.number;
+                        _this.chart();
+
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+
+
+            fetchShopData() {
+                let _this = this;
+                let date = '';
+                let store_id = 0;
+
+                if (_this.shop_form.date != '') {
+                    date = this.shop_form.date;
+                }
+
+                if (_this.allForm.id != 0) {
+                    store_id = this.allForm.id;
+                }
+
+                let params = {date: date, store_id: store_id};
+                this.onDataLoading = true;
+
+                axios.get('/admin/main/order_count', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+
+                    _this.onDataLoading = false;
+
+                    if (response.data.code === 1) {
+
+                        console.log(response);
+
+                        _this.day = response.data.data.day;
+                        _this.price = response.data.data.price;
+                        _this.shopChart();
+
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+
+        }
+    });
+</script>
+</html>

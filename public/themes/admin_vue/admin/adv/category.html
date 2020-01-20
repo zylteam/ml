@@ -1,0 +1,226 @@
+<include file="public@header_vue"/>
+</head>
+
+<style>
+.tool-box {
+    margin-bottom: 20px;
+}
+
+.custom-tree-node {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    padding-right: 8px;
+}
+
+.avatar-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.avatar-uploader .el-upload:hover {
+    border-color: #409EFF;
+}
+
+.avatar-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    text-align: center;
+}
+
+.avatar {
+    width: 60px;
+    height: 60px;
+    display: block;
+}
+</style>
+
+<body>
+<div id="app">
+<el-tabs type="border-card">
+    <el-tab-pane label="商品类别" v-loading="onDataLoading">
+        <el-row class="tool-box">
+            <el-col :span="24" style="text-align: right">
+                <el-button type="primary" size="mini" @click="edit(null)">新增</el-button>
+            </el-col>
+        </el-row>
+        <el-tree :data="treeData" node-key="id" default-expand-all :expand-on-click-node="false">
+            <span class="custom-tree-node" slot-scope="{ node, data }">
+                <span>{{ node.label }}</span>
+                <span>
+                    <el-button type="text" size="mini" @click="edit(data)"> 修改 </el-button>
+                    <el-button type="text" size="mini" @click="del(data.id)"> 删除 </el-button>
+                </span>
+            </span>
+        </el-tree>
+    </el-tab-pane>
+</el-tabs>
+<el-dialog :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading">
+    <span v-if="editForm.id === ''" slot="title" class="dialog-footer">新增品类</span>
+    <span v-else slot="title" class="dialog-footer">修改品类</span>
+    <el-form :model="form" class="demo-form-inline" label-width="80px">
+        <el-form-item label="上级类别">
+            <el-col :span="10">
+                <el-select v-model="editForm.parent_id" placeholder="请选择">
+                    <el-option :key="0" label="顶级" :value="0"></el-option>
+                    <el-option v-for="item in lv1Category" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                </el-select>
+            </el-col>
+        </el-form-item>
+        <el-form-item label="类别名称">
+            <el-col :span="10">
+                <el-input v-model="editForm.label" placeholder="类别名称"></el-input>
+            </el-col>
+        </el-form-item>
+        <el-form-item label="类别图标">
+            <el-col :span="10">
+                <el-upload class="avatar-uploader" action="/user/Asset/webuploader" :headers="headers" :show-file-list="false" :on-success="handleAvatarSuccess">
+                    <img v-if="editForm.icon" :src="editForm.icon" class="avatar">
+                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                </el-upload>
+            </el-col>
+        </el-form-item>
+    </el-form>
+    <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submit()">提交</el-button>
+    </span>
+</el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                treeData: [],
+                lv1Category: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    name: ''
+                },
+                editForm: {
+                    id: '',
+                    parent_id: 0,
+                    label: '',
+                    icon: '',
+                },
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                dialogVisible: false,
+                dialogVisible_edit: false,
+                dialogLoading: false,
+            }
+        },
+        created() {
+            this.lv1Category = JSON.parse('{$lv1Category}');
+            this.getData();
+        },
+        methods: {
+            getData() {
+                let _this = this;
+                this.onDataLoading = true;
+                axios.get('/admin/goods/category', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.treeData = response.data.data;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            edit(row) {
+                if (row) {
+                    this.editForm = JSON.parse(JSON.stringify(row));
+                } else {
+                    this.editForm = {
+                        id: '',
+                        parent_id: 0,
+                        label: '',
+                        icon: '',
+                    };
+                }
+                this.dialogVisible = true;
+
+            },
+            submit() {
+                let _this = this;
+                this.dialogLoading = true;
+                axios.post('/admin/goods/categorySubmit', this.editForm, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        if (_this.editForm.id === '') {
+                            _this.$message.success('新增完成');
+                        } else {
+                            _this.$message.success('修改成功');
+                        }
+                        _this.lv1Category = response.data.data;
+                        _this.dialogVisible = false;
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            del(id) {
+                let _this = this;
+                this.$confirm('此操作将永久删除该条目, 是否继续?', '警告', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.onDataLoading = true;
+                    axios.delete('/admin/goods/categoryDel', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        params: {id: id}
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            _this.$message.success('删除成功');
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message.info('已取消删除');
+                });
+            },
+            handleAvatarSuccess(res, file) {
+                if (res.code === 1) {
+                    this.editForm.icon = '/upload/' + res.data.filepath;
+                } else {
+                    this.$message.error(res.msg)
+                }
+            }
+        }
+    })
+</script>
+</html>

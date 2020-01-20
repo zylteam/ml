@@ -1,0 +1,177 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="优惠券发放列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="24">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="商品名称:">
+                            <el-input v-model="form.name" placeholder="商品名称" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="商品名称:">
+                            <el-date-picker v-model="form.range" type="daterange" align="right" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="dateRangePickerOptions" value-format="timestamp"></el-date-picker>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="50"></el-table-column>
+                <el-table-column prop="name" label="商品名称" min-width="200" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="number" label="销售数量" width="140"></el-table-column>
+                <el-table-column prop="gross_sales" label="销售总额" width="190" fixed="right">
+                    <template slot-scope="scope">
+                        ￥ {{scope.row.gross_sales}}
+                    </template>
+                </el-table-column>
+                <!--<el-table-column label="操作" width="190" fixed="right">
+                    <template slot-scope="scope">
+                        <el-button type="text">详细</el-button>
+                    </template>
+                </el-table-column>-->
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    name: '',
+                    range: []
+                },
+                dateRangePickerOptions: {
+                    shortcuts: [{
+                        text: '近一周',
+                        onClick(picker) {
+                            let start = new Date();
+                            let end = new Date();
+                            end = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+                            start.setTime(end.getTime() - 3600 * 1000 * 24 * 7);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '近一个月',
+                        onClick(picker) {
+                            let start = new Date();
+                            let end = new Date();
+                            end = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+
+                            let year = start.getFullYear();
+                            let month = start.getMonth();
+                            if (month === 0) {
+                                year--;
+                            }
+                            start = new Date(`${year}-${month}-${start.getDate()}`);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '近三个月',
+                        onClick(picker) {
+                            let start = new Date();
+                            let end = new Date();
+                            end = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+
+                            let year = start.getFullYear();
+                            let month = start.getMonth() + 1;
+                            if (month - 3 <= 0) {
+                                year--;
+                                month = month - 3 + 12;
+                            }
+                            start = new Date(`${year}-${month}-${start.getDate()}`);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
+            }
+        },
+        created () {
+            let start = new Date();
+            let end = new Date();
+            end = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+
+            let year = start.getFullYear();
+            let month = start.getMonth();
+            if (month === 0) {
+                year--;
+            }
+            start = new Date(`${year}-${month}-${start.getDate()}`);
+            this.   form.range = [
+                start.getTime(),
+                end.getTime()
+            ];
+
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    name: '',
+                    range: []
+                };
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.name !== ''){
+                    params.name = this.form.name;
+                }
+                if (this.form.range.length === 2){
+                    params.range = [
+                        this.form.range[0] / 1000,
+                        this.form.range[1] / 1000
+                    ];
+                }
+                axios.get('/admin/statistical/goods', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

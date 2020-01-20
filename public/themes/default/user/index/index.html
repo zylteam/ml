@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>脉鹿商家</title>
+
+    <link rel="stylesheet" href="__TMPL__/user/src/style.css">
+
+    <link rel="stylesheet" href="__TMPL__/user/src/iconfont.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.11.0/lib/theme-chalk/index.css">
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.22/dist/vue.js"></script>
+
+    <script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+
+    <script src="https://unpkg.com/element-ui@2.11.0/lib/index.js"></script>
+
+</head>
+
+<style>
+
+
+
+    .bot {
+
+        position: fixed;
+
+        left: 0;
+
+        bottom: 0;
+
+        width: 100%;
+
+        background: #fff;
+
+        box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.1);
+
+    }
+    .bot a {
+
+        width: 80%;
+
+        display: block;
+
+        margin: 0.5rem auto;
+
+        font-size: 1.2rem;
+        height: 1rem;
+        line-height: 1rem;
+        color: #fff;
+
+        background:#fff;
+
+        text-align: center;
+
+        border-radius: 0.4rem;
+
+    }
+    .callBtn{
+        display: inline!important;
+        background: #fff!important;
+        border: none;
+        text-decoration:none!important;
+        color: #333!important;
+    }
+
+</style>
+
+
+
+<body>
+
+<div id="app">
+
+    <div class="m25 ptb25 p_l_r15 bc_fff flex flex_vc">
+
+        <img src="{$store_info.logo}" class="bor50 mr20" style="width: 5rem;height:5rem" alt="">
+
+        <div class="flex_f1 mr20">
+
+            <p class="fontsize32 ">{$store_info.store_name}</p>
+
+            <p class="c_666 mt10">{$store_info.address}</p>
+
+        </div>
+
+        <a href="{:url('user/index/store')}" class="btn">查看店铺</a>
+
+    </div>
+
+
+
+    <div class="m_l_r25   flex  text-c">
+
+        <div class="flex_f1 bc_fff flex flex_cl  flex_c mr1 mb1" style="height:8rem">
+
+            <el-link class="fontsize36 " :underline="false" href="{:url('user/index/settlement_list')}">结算记录</el-link>
+
+            <p class="c_666 mt10">今日收入：¥{$store_info.today_income}</p>
+
+        </div>
+
+        <div class="flex_f1 bc_fff  flex flex_cl flex_c mb1" style="height:8rem">
+
+            <el-link class="fontsize36 " :underline="false" @click="scanCode()">扫码核销</el-link>
+
+            <i class="c_666 mt10 iconfont icon-scan1 fontsize36"></i>
+
+        </div>
+
+    </div>
+
+    <div class="m_l_r25  flex  text-c">
+
+        <div class="flex_f1 bc_fff flex flex_cl  flex_c mr1 mb1" style="height:8rem">
+
+            <el-link class="fontsize36 " :underline="false" href="{:url('user/index/order_list')}">订单管理</el-link>
+
+            <p class="c_666 mt10">今日订单：{$store_info.today_order_count}单</p>
+
+        </div>
+
+        <div class="flex_f1 bc_fff  flex flex_cl flex_c mb1" style="height:8rem">
+
+            <eq name="$store_info.wx_openid" value="">
+
+                <el-link class="fontsize36 " :underline="false" @click="bind_wechat()">绑定微信</el-link>
+
+                <p class="c_666 mt10">未绑定</p>
+
+                <else/>
+
+                <p class="c_666 mt10">已绑定</p>
+
+            </eq>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="bot flex text-c fontsize30">
+
+        <div class="flex_f1 mt20 mb20">
+
+            <i class="iconfont icon-wenhao"></i>
+            <a href="" class="callBtn" >帮助中心</a>
+
+        </div>
+
+        <div class="flex_f1 borderl1 flex_top mt20 mb20" onclick="call()">
+            <i class="iconfont icon-kefu"></i>
+            <a href="tel:18934541313" class="callBtn" >联系客服</a>
+        </div>
+
+        <div class="flex_f1 borderl1 mt20 mb20 c_red2" @click="loginOut">
+
+            <i class="iconfont icon-Group-"></i>
+
+            退出
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+</body>
+
+<script src="https://res.wx.qq.com/open/js/jweixin-1.4.0.js" type="text/javascript" charset="utf-8"></script>
+
+<script type="text/javascript" charset="utf-8">
+
+    wx.config({$js});
+
+</script>
+
+<script>
+
+    var app = new Vue({
+
+        el: '#app',
+
+        data: function () {
+
+            return {
+
+                store_info: [],
+
+            }
+
+        },
+
+        created() {
+
+            this.store_info = JSON.parse(JSON.stringify({$store_info}));
+
+        },
+
+        methods: {
+
+            submit(login_form) {
+
+                let _this = this;
+
+                _this.$refs[login_form].validate((valid) => {
+
+                    if (valid) {
+
+                        axios.post("{:url('api/login/store_user_login')}", _this.login_form, {
+
+                            headers: {
+
+                                'X-Requested-With': 'XMLHttpRequest',
+
+                            }
+
+                        }).then(function (response) {
+
+                            if (response.data.code === 1) {
+
+
+
+                                _this.$message({
+
+                                    message: '登录成功', type: 'success', onClose: function () {
+
+                                        window.location.href = "{:url('user/index/index')}";
+
+                                    }
+
+                                });
+
+
+
+                            } else {
+
+                                _this.$message.error('登录失败');
+
+                            }
+
+                        })
+
+                    } else {
+
+                        console.log('error submit!!');
+
+                        return false;
+
+                    }
+
+                })
+
+            },
+
+            bind_wechat() {
+
+                let _this = this;
+
+                axios.get("{:url('user/index/bind_wechat')}", {
+
+                    headers: {
+
+                        'X-Requested-With': 'XMLHttpRequest',
+
+                    }
+
+                }).then(function (response) {
+
+                    if (response.data.code === 1) {
+
+                        _this.$message({
+
+                            message: '绑定成功', type: 'success', onClose: function () {
+
+                                window.location.reload();
+
+                            }
+
+                        });
+
+
+
+                    } else {
+
+                        _this.$message.error('绑定失败');
+
+                    }
+
+                })
+
+            },
+
+            scanCode(){
+
+                wx.scanQRCode({
+
+                    needResult: 1, // 默认为0，扫描结果由微信处理，1则直接返回扫描结果，
+
+                    scanType: ["qrCode","barCode"], // 可以指定扫二维码还是一维码，默认二者都有
+
+                    success: function (res) {
+
+                        var result = res.resultStr; // 当needResult 为 1 时，扫码返回的结果
+
+                        window.location.href = "/user/index/check_code?code="+result;
+
+                    }
+
+                });
+
+            },
+
+            loginOut() {
+
+                axios.get("{:url('api/login/login_out')}", {
+
+                    headers: {
+
+                        'X-Requested-With': 'XMLHttpRequest',
+
+                    }
+
+                }).then(function (response) {
+
+                    if (response.data.code === 1) {
+
+                        window.location.href="{:url('user/login/index')}";
+
+                    } else {
+
+                        _this.$message.error('退出失败');
+
+                    }
+
+                })
+
+            }
+
+        },
+
+
+
+    });
+
+</script>
+
+</html>

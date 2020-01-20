@@ -1,0 +1,932 @@
+<include file="public@header_vue"/>
+<script src="//unpkg.com/wangeditor@3.1.1/release/wangEditor.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue-ueditor-wrap@latest/lib/vue-ueditor-wrap.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="__STATIC__/UEditor/ueditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="__STATIC__/UEditor/ueditor.all.min.js"></script>
+<!--建议手动加在语言，避免在ie下有时因为加载语言失败导致编辑器加载失败-->
+<!--这里加载的语言文件会覆盖你在配置项目里添加的语言类型，比如你在配置项目里配置的是英文，这里加载的中文，那最后就是中文-->
+<script type="text/javascript" charset="utf-8" src="__STATIC__/UEditor/lang/zh-cn/zh-cn.js"></script>
+<style>
+    .el-pagination {
+        margin-top: 20px;
+    }
+    /*.el-form-item__content{*/
+    /*    line-height: 0px !important;*/
+    /*}*/
+    .avatar {
+        width: 40px;
+        height: auto;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .avatar-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 178px;
+        height: 178px;
+        line-height: 178px;
+        text-align: center;
+    }
+
+    .avatar {
+        width: 178px;
+        height: 178px;
+        display: block;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .photos {
+        width: 120px;
+        height: 120px;
+        border-radius: 6px;
+        overflow: hidden;
+        float: left;
+        margin-right: 10px;
+        margin-bottom: 10px;
+        position: relative;
+    }
+
+    .photos-options {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 120px;
+        line-height: 120px;
+        width: 120px;
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.6);
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.6s;
+    }
+
+    .photos:hover .photos-options {
+        opacity: 1;
+    }
+
+    .photos-options .el-button {
+        font-size: 24px;
+        color: white
+    }
+
+    .photos img {
+        width: 120px;
+        height: 120px;
+    }
+
+    .photos-uploader {
+        width: 120px;
+        height: 120px;
+        float: left;
+    }
+
+    .logo-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .logo-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .logo-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 120px;
+        height: 120px;
+        line-height: 120px;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="日记列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" class="demo-form-inline" size="mini">
+                        <el-form-item label="关键词：">
+                            <el-input v-model="form.name" placeholder="关键词"></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null)">新增</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="ID" width="50"></el-table-column>
+                <el-table-column prop="sort" label="排序" width="80">
+                    <template slot-scope="scope">
+                        <el-input v-model="scope.row.sort"
+                                  @change="change_status('sort',scope.row.sort,scope.row.id)"></el-input>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="nickname" label="昵称"></el-table-column>
+                <el-table-column prop="title" label="标题"></el-table-column>
+                <el-table-column prop="sub_title" label="副标题"></el-table-column>
+                <el-table-column label="评价(好评-差评)">
+                    <template slot-scope="scope">
+                        {{scope.row.agree}}-{{scope.row.disagree}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="category" label="分类标签">
+                    <template slot-scope="scope">
+                        <el-tag v-for=" (category,index) in scope.row.category" :key="index"
+                                @close="handleAttrClose(category)">{{category}}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="attribute" label="属性标签">
+                    <template slot-scope="scope">
+                        <el-tag v-for=" (attribute,index) in scope.row.attribute" :key="index"
+                                @close="handleAttrClose(attribute)">{{attribute}}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="cuisine" label="菜系">
+                    <template slot-scope="scope">
+                        <el-tag v-for=" (attribute,index) in scope.row.cuisine" :key="index"
+                                @close="handleAttrClose(attribute)">{{attribute}}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="people" label="人数">
+                    <template slot-scope="scope">
+                        <el-tag v-for=" (attribute,index) in scope.row.people" :key="index"
+                                @close="handleAttrClose(attribute)">{{attribute}}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+
+                <!--                <el-table-column prop="is_check" label="是否审核">-->
+                <!--                    <template slot-scope="scope">-->
+                <!--                        <el-switch-->
+                <!--                                v-model="scope.row.is_check"-->
+                <!--                                active-color="#13ce66"-->
+                <!--                                :active-value="1"-->
+                <!--                                :inactive-value="0"-->
+                <!--                                @change="change_status('is_check',scope.row.is_check,scope.row.id)"-->
+                <!--                                inactive-color="#ff4949">-->
+                <!--                        </el-switch>-->
+                <!--                    </template>-->
+                <!--                </el-table-column>-->
+                <el-table-column prop="is_recommend" label="是否推荐">
+                    <template slot-scope="scope">
+                        <el-switch
+                                v-model="scope.row.is_recommend"
+                                active-color="#13ce66"
+                                :active-value="1"
+                                :inactive-value="0"
+                                @change="change_status('is_recommend',scope.row.is_recommend,scope.row.id)"
+                                inactive-color="#ff4949">
+                        </el-switch>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="create_time" label="创建时间" min-width="120">
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="180">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="edit(scope.row)">编辑</el-button>
+                        <el-button size="mini" type="text" @click="delete_officer(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            0
+        </el-tab-pane>
+    </el-tabs>
+    <!--体验官添加-->
+
+    <el-dialog title="添加日记" style="z-index: 1000;" :visible.sync="dialogDiaryVisible"
+               v-loading.fullscreen="dialogLoading" width="80%">
+        <el-form :model="diary_form" class="demo-form-inline" :rules="diary_rules" ref="diary_form"
+                 label-width="130px">
+            <el-form-item label="标题" prop="title">
+                <el-col :span="24">
+                    <el-input v-model="diary_form.title" placeholder="标题"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="副标题" prop="sub_title">
+                <el-col :span="24">
+                    <el-input v-model="diary_form.sub_title" placeholder="副标题"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="选择体验官" prop="officer_id">
+                <el-col :span="24">
+                    <el-select v-model="diary_form.officer_id" placeholder="选择体验官">
+                        <el-option v-for="officer in officer_list " :key="officer.id" :label="officer.nickname"
+                                   :value="officer.id"></el-option>
+                    </el-select>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="评价" prop="rank">
+                <el-col :span="24">
+                    好评:
+                    <el-input v-model="diary_form.agree" style="width:200px" placeholder="好评"></el-input>
+                    差评:
+                    <el-input v-model="diary_form.disagree" style="width:200px" placeholder="差评"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="分类标签" prop="category">
+                <el-col :span="24">
+                    <el-button @click="select_method('category')">选择分类</el-button>
+                    <el-tag v-for=" (category,index) in diary_form.category" closable :key="index"
+                            @close="handleClose(category)">{{category}}
+                    </el-tag>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="属性标签" prop="attribute">
+                <el-col :span="24">
+                    <el-button @click="select_method('attribute')">选择属性</el-button>
+                    <el-tag v-for=" (attribute,index) in diary_form.attribute" closable :key="index"
+                            @close="handleAttrClose(attribute)">{{attribute}}
+                    </el-tag>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="人数" prop="people">
+                <el-col :span="24">
+                    <el-button @click="select_method('people')">选择人数</el-button>
+                    <el-tag v-for=" (people,index) in diary_form.people" closable :key="index"
+                            @close="handlePeopleClose(people)">{{people}}
+                    </el-tag>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="菜系" prop="cuisine">
+                <el-col :span="24">
+                    <el-button @click="select_method('cuisine')">选择菜系</el-button>
+                    <el-tag v-for=" (cuisine,index) in diary_form.cuisine" closable :key="index"
+                            @close="handleCuisineClose(cuisine)">{{cuisine}}
+                    </el-tag>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="封面图片" prop="cover_pic">
+                <el-col :span="18">
+                    <el-upload
+                            class="avatar-uploader"
+                            action="{:url('api/upload/upload')}"
+                            :show-file-list="false"
+                            :on-success="handleAvatarSuccess"
+                            :before-upload="beforeAvatarUpload">
+                        <img v-if="diary_form.cover_pic" :src="diary_form.cover_pic" class="avatar"/>
+                        <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                    </el-upload>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="视频" prop="video">
+                <el-col :span="18">
+                    <el-upload
+                            class="avatar-uploader"
+                            action="{:url('api/upload/one')}"
+                            :show-file-list="false"
+                            :on-success="handleVideoSuccess"
+                            :on-progress="uploadVideoProcess"
+                            :before-upload="beforeVideoUpload">
+                        <video v-if="diary_form.video" :src="diary_form.video" class="avatar"></video>
+                        <!--                        <img v-if="diary_form.head_img" :src="diary_form.head_img" class="avatar">-->
+                        <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                        <el-progress v-if="videoFlag == true" type="circle" :percentage="videoUploadPercent"
+                                     style="margin-top:30px;"></el-progress>
+                    </el-upload>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="选择商家" prop="store_id">
+                <el-col :span="24">
+                    <el-select v-model="diary_form.store_id" placeholder="选择商家" @change="get_store_info($event)">
+                        <el-option v-for="(store,index) in store_option " :key="store.id" :label="store.store_name"
+                                   :value="store.id"></el-option>
+                    </el-select>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="商家名称" prop="store_name">
+                <el-col :span="24">
+                    <el-input v-model="diary_form.store_name" placeholder="商家名称" :disabled="true"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="商家地址" prop="store_address">
+                <el-col :span="24">
+                    <el-input v-model="diary_form.store_address" placeholder="商家地址" :disabled="true"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="消费金额" prop="consume_amount">
+                <el-col :span="24">
+                    <el-input v-model="diary_form.consume_amount" placeholder="消费金额"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="试吃菜品" prop="eat_dishes">
+                <el-col :span="24">
+                    <el-input v-model="diary_form.eat_dishes" placeholder="试吃菜品"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="" prop="">
+                <el-col :span="24">
+                    <el-button @click="add_menu">新增菜品</el-button>
+                </el-col>
+            </el-form-item>
+            <el-form-item
+                    v-for="(domain, index) in diary_form.menu"
+                    :label="'菜品' + index"
+                    :key="domain.key"
+                    prop="菜名">
+                <el-input v-model="domain.name" style="width:200px" placeholder="菜名"></el-input>
+                <el-input v-model="domain.value" style="width:200px" placeholder="价格"></el-input>
+                <el-button @click.prevent="remove_menu(domain)">删除</el-button>
+            </el-form-item>
+            <el-form-item label="是否有福利" prop="has_welfare">
+                <el-switch
+                        v-model="diary_form.has_welfare"
+                        active-color="#13ce66"
+                        :active-value="1"
+                        :inactive-value="0"
+                        inactive-color="#ff4949">
+                </el-switch>
+            </el-form-item>
+            <el-form-item v-if="diary_form.has_welfare === 1" label="选择优惠券" prop="coupon_id">
+                <el-col :span="24">
+                    <el-select v-model="diary_form.coupon_id" placeholder="选择优惠券">
+                        <el-option v-for="(coupon,index) in coupon_list " :key="coupon.id" :label="coupon.name"
+                                   :value="coupon.id"></el-option>
+                    </el-select>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="文章详情" prop="detail">
+                <el-col :span="24">
+                    <!--                    <div ref="editor" style="text-align:left"></div>-->
+                    <vue-ueditor-wrap v-model="diary_form.detail" :config="myConfig" style="line-height: 0px;"></vue-ueditor-wrap>
+                </el-col>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button v-if="diary_form.id == 0 " type="primary" @click="submit('diary_form')">新增</el-button>
+            <el-button v-else="" type="primary" @click="submit('diary_form')">修改</el-button>
+        </span>
+    </el-dialog>
+    <!--人数 -->
+    <el-dialog :title="dialog_title" :visible.sync="dialog_Visible"
+               v-loading.fullscreen="dialogLoading" width="40%">
+        <el-form :model="add_category_form" :rules="category_rules" class="demo-form-inline" ref="add_category_form"
+                 label-width="130px">
+            <el-form-item :label="add_category_form.title" prop="name">
+                <el-col>
+                    <el-input style="width: 200px;" v-model="add_category_form.name"></el-input>
+                    <el-button type="primary" @click="submit('add_category_form')" plain>新增</el-button>
+                </el-col>
+            </el-form-item>
+
+        </el-form>
+
+        <el-form :model="dialog_form" class="demo-form-inline" ref="dialog_form"
+                 label-width="130px">
+            <el-checkbox-group v-model="dialog_form.category_list">
+                <el-checkbox name="category" v-for="category in category_list" :label="category.name"
+                             :key="category.id">{{category.name}}
+                </el-checkbox>
+            </el-checkbox-group>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submit('dialog_form')">确定</el-button>
+        </span>
+    </el-dialog>
+
+</div>
+
+<script>
+    Vue.component('vue-ueditor-wrap', VueUeditorWrap)
+    var E = window.wangEditor;
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            var checkPhone = (rule, value, callback) => {
+                if (!value) {
+                    return callback(new Error('手机号不能为空'));
+                } else {
+                    const reg = /^1[3|4|5|7|8][0-9]\d{8}$/
+                    if (reg.test(value)) {
+                        callback();
+                    } else {
+                        return callback(new Error('请输入正确的手机号'));
+                    }
+                }
+            };
+            return {
+                tableData: [],
+                myConfig: {
+                    // 编辑器不自动被内容撑高
+                    autoHeightEnabled: false,
+                    // 初始容器高度
+                    initialFrameHeight: 400,
+                    zIndex: 3000,
+                    // 初始容器宽度
+                    initialFrameWidth: '90%',
+                    // 上传文件接口（这个地址是我为了方便各位体验文件上传功能搭建的临时接口，请勿在生产环境使用！！！）
+                    serverUrl: 'http://ml.0513app.cn/static/UEditor/php/controller.php',
+                    // UEditor 资源文件的存放路径，如果你使用的是 vue-cli 生成的项目，通常不需要设置该选项，vue-ueditor-wrap 会自动处理常见的情况，如果需要特殊配置，参考下方的常见问题2
+                    UEDITOR_HOME_URL: '/static/UEditor/',
+                },
+                store_option: [],
+                officer_option: [],
+                category_list: [],
+                category_list_1: [],
+                attribute_list: [],
+                cuisine_list: [],
+                people_list: [],
+                coupon_list: [],
+                onDataLoading: false,
+                dialogLoading: false,
+                couponVisible: false,
+                videoFlag: false,
+                product_id: 0,
+                editor: null,
+                dialog_Visible: false,
+                videoUploadPercent: 0,
+                dialog_title: '',
+                dialog_type: '',
+                form: {
+                    name: ''
+                },
+                add_category_form: {
+                    name: '',
+                    type: '',
+                    title: '',
+                    id: '',
+                },
+                category_name: '',
+                dialog_form: {
+                    category_list: []
+                },
+                currentPage: 1,
+                totalNum: 0,
+                dialogDiaryVisible: false,
+                officer_list: [],
+                diary_form: {
+                    title: '',
+                    video: '',
+                    officer_id: '',
+                    category: [],
+                    store_id: '',
+                    store_name: '',
+                    store_address: '',
+                    consume_amount: '',
+                    eat_dishes: '',
+                    cover_pic: '',
+                    menu: [{
+                        value: ''
+                    }],
+                    sub_title: '',
+                    attribute: [],
+                    cuisine: [],
+                    people: [],
+                    id: ''
+                },
+                diary_rules: {
+                    title: [{required: true, message: '请输入标题', trigger: 'blur'}],
+                    sub_title: [{required: true, message: '请输入副标题', trigger: 'blur'}],
+                    officer_id: [{required: true, message: '请选择体验官', trigger: 'blur'}],
+                    category: [{required: true, message: '请选择分类标签', trigger: 'blur'}],
+                    attribute: [{required: true, message: '请选择属性标签', trigger: 'blur'}],
+                    cuisine: [{required: true, message: '请选择菜系', trigger: 'blur'}],
+                    people: [{required: true, message: '请选择人数', trigger: 'blur'}],
+                    store_id: [{required: true, message: '请选择店铺', trigger: 'blur'}],
+                    consume_amount: [{required: true, message: '请输入消费金额', trigger: 'blur'}],
+                    eat_dishes: [{required: true, message: '请输入试吃菜品', trigger: 'blur'}],
+                },
+                category_rules: {
+                    name: [{required: true, message: '请输入参数', trigger: 'blur'}],
+                },
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            };
+        },
+        created() {
+            this.getData();
+        },
+        methods: {
+            clearForm() {
+                this.form = {
+                    name: '',
+                }
+            },
+            init_select() {
+                let _this = this;
+                _this.onDataLoading = true;
+
+                axios.get("{:url('admin/experience_diary/get_select_data')}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    console.log(response.data.attribute_list);
+                    _this.category_list_1 = response.data.category_list
+                    _this.attribute_list = response.data.attribute_list
+                    _this.people_list = response.data.people_list
+                    _this.cuisine_list = response.data.cuisine_list
+                    _this.store_option = response.data.store_list;
+                    _this.officer_list = response.data.officer_list;
+                    _this.onDataLoading = false;
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            select_method(type) {
+                let _this = this;
+                _this.dialog_type = type;
+                _this.add_category_form = {
+                    name: '',
+                }
+                if (type == 'people') {
+                    _this.dialog_Visible = true;
+                    _this.dialog_title = '选择人数';
+                    _this.category_list = _this.people_list;
+                    if (_this.diary_form.people) {
+                        _this.dialog_form.category_list = _this.diary_form.people;
+                    }
+                    _this.add_category_form.title = '新增人数';
+                    _this.add_category_form.type = 3;
+
+                } else if (type == "cuisine") {
+                    _this.dialog_Visible = true;
+                    _this.dialog_title = '选择菜系';
+                    _this.category_list = _this.cuisine_list;
+                    console.log(_this.cuisine_list)
+                    if (_this.diary_form.cuisine) {
+                        _this.dialog_form.category_list = _this.diary_form.cuisine;
+                    }
+                    _this.add_category_form.title = '新增菜系';
+                    _this.add_category_form.type = 4;
+                } else if (type == 'category') {
+                    _this.dialog_Visible = true;
+                    _this.dialog_title = '选择分类';
+                    _this.category_list = _this.category_list_1;
+                    if (_this.diary_form.category) {
+                        _this.dialog_form.category_list = _this.diary_form.category;
+                    }
+                    _this.add_category_form.title = '新增分类';
+                    _this.add_category_form.type = 1;
+                } else if (type == 'attribute') {
+                    _this.dialog_Visible = true;
+                    _this.dialog_title = '选择属性';
+                    _this.category_list = _this.attribute_list;
+                    if (_this.diary_form.attribute) {
+                        _this.dialog_form.category_list = _this.diary_form.attribute;
+                    }
+                    _this.add_category_form.title = '新增属性';
+                    _this.add_category_form.type = 2;
+                }
+
+            },
+            get_store_info(event) {
+                let _this = this;
+                let item = '';
+                for (let i = 0; i < _this.store_option.length; i++) {
+                    if (_this.store_option[i]['id'] == event) {
+                        item = _this.store_option[i];
+                    }
+                }
+                _this.diary_form.store_address = item.address;
+                _this.diary_form.store_name = item.store_name;
+                axios.get("{:url('admin/coupon/get_coupon_by_store_id')}" + "?id=" + event, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    console.log(response.data);
+                    _this.coupon_list = response.data;
+                    _this.onDataLoading = false;
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+
+            },
+            submit(form) {
+                let _this = this;
+                if (form == 'diary_form') {
+                    _this.dialogLoading = true;
+                    this.$refs[form].validate((valid) => {
+                        console.log(_this.diary_form)
+                        if (valid) {
+                            axios.post("{:url('admin/ExperienceDiary/update')}", _this.diary_form, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            }).then(function (response) {
+                                _this.dialogLoading = false;
+                                if (response.data.code === 1) {
+                                    if (_this.diary_form.id === '') {
+                                        _this.$message.success('新增完成');
+                                    } else {
+                                        _this.$message.success('修改成功');
+                                    }
+                                    _this.dialogDiaryVisible = false;
+                                    _this.getData(_this.currentPage);
+                                } else {
+                                    _this.$message.warning(response.data.msg);
+                                }
+                            }).catch(function (error) {
+                                _this.dialogLoading = false;
+                                _this.$message.error(error.toString())
+                            })
+                        } else {
+                            console.log('error submit!!');
+                            _this.dialogLoading = false;
+                            return false;
+                        }
+                    });
+                } else if (form == 'dialog_form') {
+                    let dialog_type = _this.dialog_type;
+                    if (dialog_type == 'category') {
+
+                        if (_this.dialog_form.category_list == '') {
+                            _this.dialog_form.category_list = [];
+                            _this.$message.error('请选择分类标签')
+                        } else {
+
+                            _this.dialog_Visible = false;
+                            _this.diary_form.category = _this.dialog_form.category_list
+                            _this.dialog_form.category_list = [];
+                        }
+                    } else if (dialog_type == 'attribute') {
+
+                        if (_this.dialog_form.category_list == '') {
+                            _this.dialog_form.category_list = [];
+                            _this.$message.error('请选择属性标签')
+                        } else {
+                            _this.dialog_Visible = false;
+                            _this.diary_form.attribute = _this.dialog_form.category_list
+                            _this.dialog_form.category_list = [];
+                        }
+                        console.log(_this.diary_form.category_list)
+                    } else if (dialog_type == 'people') {
+                        if (_this.dialog_form.category_list == '') {
+                            _this.dialog_form.category_list = [];
+                            _this.$message.error('请选择人数')
+                        } else {
+                            _this.dialog_Visible = false;
+                            _this.diary_form.people = _this.dialog_form.category_list;
+                            _this.dialog_form.category_list = [];
+                        }
+                    } else if (dialog_type == 'cuisine') {
+
+                        if (_this.dialog_form.category_list == '') {
+                            _this.dialog_form.category_list = [];
+                            _this.$message.error('请选择菜系')
+                        } else {
+                            _this.dialog_Visible = false;
+                            _this.diary_form.cuisine = _this.dialog_form.category_list;
+                            _this.dialog_form.category_list = [];
+                        }
+                    }
+
+                } else if (form == 'add_category_form') {
+                    _this.dialogLoading = true;
+                    _this.$refs[form].validate((valid) => {
+                        if (valid) {
+                            axios.post("{:url('admin/category/update')}", _this.add_category_form, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            }).then(function (response) {
+                                _this.dialogLoading = false;
+                                if (response.data.code === 1) {
+                                    _this.$message.success('新增完成');
+                                    _this.init_select();
+                                    _this.category_list = response.data.data.list
+                                } else {
+                                    _this.$message.warning(response.data.msg);
+                                }
+                            }).catch(function (error) {
+                                _this.dialogLoading = false;
+                                _this.$message.error(error.toString())
+                            })
+                        } else {
+                            _this.dialogLoading = false;
+                            return false;
+                        }
+                    })
+                }
+            },
+            delete_officer(id) {
+                let _this = this;
+                _this.dialogLoading = true;
+                if (id) {
+                    params = {id: id};
+                    axios.post('/admin/experience_diary/delete', params, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    }).then(function (response) {
+                        _this.dialogLoading = false;
+                        if (response.data.code === 1) {
+                            _this.$message.success('删除完成');
+                            _this.getData(_this.currentPage);
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.dialogLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }
+            },
+            change_status(field, value, id) {
+                let _this = this;
+                this.dialogLoading = true;
+                params = {field: field, value: value, id: id};
+                axios.post("{:url('admin/experience_diary/change_status')}", params, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('修改完成');
+                        _this.getData(_this.currentPage);
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                })
+            },
+            getData(page = 1) {
+                let _this = this;
+                let params = {page: page};
+                if(_this.form.name){
+                    params.keyword = _this.form.name;
+                }
+                _this.onDataLoading = true;
+                axios.get("{:url('admin/experience_diary/index')}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.list;
+                        _this.totalNum = response.data.data.count;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            handleAvatarSuccess(res, file) {
+                this.imageUrl = URL.createObjectURL(file.raw);
+                this.diary_form.cover_pic = res.url;
+            },
+            handleVideoSuccess(res, file) {
+                this.videoFlag = false;
+                this.videoUploadPercent = 0;
+                // this.imageUrl = URL.createObjectURL(file.raw);
+                this.diary_form.video = res.url;
+            },
+            add_menu() {
+                this.diary_form.menu.push({
+                    value: '',
+                    key: Date.now()
+                });
+                // this.diary_form.menu.push({
+                //     value: '',
+                //     key: Date.now()
+                // });
+                console.log(this.diary_form)
+            },
+            remove_menu(item) {
+                var index = this.diary_form.menu.indexOf(item)
+                if (index !== -1) {
+                    this.diary_form.menu.splice(index, 1)
+                }
+            },
+            beforeAvatarUpload(file) {
+                console.log(file.type)
+                const isJPG = file.type === 'image/jpeg' || 'image/png';
+
+                const isLt2M = file.size / 1024 / 1024 < 10;
+
+                if (!isJPG) {
+                    this.$message.error('上传头像图片只能是 JPG 格式或者PNG格式!');
+                }
+                if (!isLt2M) {
+                    this.$message.error('上传头像图片大小不能超过 2MB!');
+                }
+                return isJPG && isLt2M;
+            },
+            beforeVideoUpload(file) {
+                const isJPG = file.type.search('video') === 0;
+                const isLt2M = file.size / 1024 / 1024 < 100;
+                if (!isJPG) {
+                    this.$message.error('上传视频格式错误，必须为mp4!');
+                }
+                if (!isLt2M) {
+                    this.$message.error('上传视频大小不能超过 100MB!');
+                }
+                return isJPG && isLt2M;
+            },
+            uploadVideoProcess(event, file, fileList) {
+                this.videoFlag = true;
+                this.videoUploadPercent = parseInt(file.percentage);
+            },
+            edit(row) {
+                let _this = this;
+                if (row) {
+                    console.log(row)
+                    _this.diary_form = JSON.parse(JSON.stringify(row));
+                    console.log(_this.diary_form.people)
+                    if (_this.diary_form.store_id) {
+                        axios.get("{:url('admin/coupon/get_coupon_by_store_id')}" + "?id=" + _this.diary_form.store_id, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                            }
+                        }).then(function (response) {
+                            _this.coupon_list = response.data;
+                        }).catch(function (error) {
+                            _this.$message.error(error.toString())
+                        })
+                    }
+                } else {
+                    _this.diary_form = {
+                        title: '',
+                        video: '',
+                        category: [],
+                        cover_pic: '',
+                        store_id: '',
+                        officer_id: '',
+                        store_name: '',
+                        store_address: '',
+                        consume_amount: '',
+                        eat_dishes: '',
+                        menu: [],
+                        sub_title: '',
+                        attribute: [],
+                        cuisine: [],
+                        people: [],
+                        id: ''
+                    }
+                }
+                _this.init_select();
+                _this.dialogDiaryVisible = true;
+            },
+            handleClose(tag) {
+                this.diary_form.category.splice(this.diary_form.category.indexOf(tag), 1);
+            },
+            handleAttrClose(tag) {
+                this.diary_form.attribute.splice(this.diary_form.attribute.indexOf(tag), 1);
+            },
+            handlePeopleClose(tag) {
+                this.diary_form.people.splice(this.diary_form.people.indexOf(tag), 1);
+            },
+            handleCuisineClose(tag) {
+                this.diary_form.cuisine.splice(this.diary_form.cuisine.indexOf(tag), 1);
+            },
+            select_category() {
+                this.dialogCategoryVisible = true;
+            },
+            select_attribute() {
+                this.dialogAttributeVisible = true;
+            },
+            formatDate(timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDay()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+            },
+            prefix(num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    });
+</script>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh_CN" style="overflow: hidden;">
+<head>
+    <meta charset="UTF-8"/>
+    <title>脉鹿星选 {:lang('ADMIN_CENTER')}</title>
+    <!-- Set render engine for 360 browser -->
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1,IE=edge"/>
+    <meta name="renderer" content="webkit|ie-comp|ie-stand">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- element样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.6.3/lib/theme-chalk/index.css">
+    <!-- VUE -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.22/dist/vue.js"></script>
+    <!-- element组件库 -->
+    <script src="https://unpkg.com/element-ui@2.6.3/lib/index.js"></script>
+    <!-- axios请求库 -->
+    <script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+
+    <link href="__STATIC__/font-awesome/css/font-awesome.min.css?page=index" rel="stylesheet" type="text/css">
+</head>
+<body>
+<el-container id="app">
+    <el-header class="header" height="40px">
+        <a class="header-logo" href="/admin/index/index.html" class="navbar-brand"
+           style="min-width: 200px;text-align: center;">脉鹿星选</a>
+        <div class="admin-user" ref="dropdown">
+            <div class="refresh">
+                <el-button icon="el-icon-refresh" type="text" @click="refresh"></el-button>
+            </div>
+            <el-dropdown @command="adminUserClick">
+            <span class="el-dropdown-link">
+                {:lang('WELCOME_USER',array('user_nickname' => empty($admin['user_nickname'] )? $admin['user_login'] : $admin['user_nickname']))}<i
+                    class="el-icon-arrow-down el-icon--right"></i>
+            </span>
+                <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item command="settingSite"><i class="fa fa-cog"></i> {:lang('ADMIN_SETTING_SITE')}
+                    </el-dropdown-item>
+                    <el-dropdown-item command="userInfo"><i class="fa fa-user"></i> {:lang('ADMIN_USER_USERINFO')}
+                    </el-dropdown-item>
+                    <el-dropdown-item command="settingPassword"><i class="fa fa-lock"></i>
+                        {:lang('ADMIN_SETTING_PASSWORD')}
+                    </el-dropdown-item>
+                    <el-dropdown-item command="logout"><i class="fa fa-sign-out"></i> {:lang('LOGOUT')}
+                    </el-dropdown-item>
+                </el-dropdown-menu>
+            </el-dropdown>
+        </div>
+    </el-header>
+    <el-container>
+        <el-aside width="200px">
+            <el-scrollbar style="height: 100%;">
+                <div class="btn-list">
+                    <el-button type="warning" icon="fa fa-home" size="mini" circle @click="toHome()"></el-button>
+
+                    <if condition="cmf_auth_check(cmf_get_current_admin_id(),'user/AdminAsset/index')">
+                        <el-button type="info" icon="fa fa-file" size="mini" circle
+                                   @click="toMenuItem('userAdminAssetindex', '/user/admin_asset/index.html', '资源管理')"></el-button>
+                    </if>
+
+                    <if condition="cmf_auth_check(cmf_get_current_admin_id(),'admin/Setting/clearcache')">
+                        <el-button type="danger" icon="fa fa-trash-o" size="mini" circle
+                                   @click="toMenuItem('index_clearcache', '/admin/Setting/clearcache.html', '{:lang('ADMIN_SETTING_CLEARCACHE')}')"></el-button>
+                    </if>
+
+                    <if condition="cmf_auth_check(cmf_get_current_admin_id(),'admin/RecycleBin/index')">
+                        <el-button type="danger" icon="fa fa-recycle" size="mini" circle
+                                   @click="toMenuItem('index_recycle', '/admin/recycle_bin/index.html', '回收站')"></el-button>
+                    </if>
+
+                    <el-button type="primary" icon="fa fa-list" size="mini" circle
+                               @click="toMenuItem('index_menu', '/admin/Menu/index.html', '{:lang('ADMIN_MENU_INDEX')}')"></el-button>
+                </div>
+                <el-menu default-active="2" unique-opened>
+                    <volist name="menus" id="topmenu">
+                        <if condition="isset($topmenu['items'])">
+                            <el-submenu index={$topmenu['id']}>
+                                <template slot="title">
+                                    <i class="fa fa-{$topmenu['icon']} normal"></i>
+                                    <span>{$topmenu['name']}</span>
+                                </template>
+                                <volist name="topmenu['items']" id="twolvmenu">
+                                    <if condition="isset($twolvmenu['items'])">
+                                        <el-submenu index="{$twolvmenu['id']}">
+                                            <i class="fa fa-{$twolvmenu['icon']} normal"></i>
+                                            <span slot="title">{$twolvmenu['name']}</span>
+                                            <volist name="twolvmenu['items']" id="threelvmenu">
+                                                <el-menu-item index="{$threelvmenu['id']}"
+                                                              @click="toMenuItem('{$threelvmenu.id}', '{$threelvmenu.url}', '{$threelvmenu.name}')">
+                                                    <i class="fa fa-{$threelvmenu['icon']} normal"></i>
+                                                    <span slot="title">{$threelvmenu['name']}</span>
+                                                </el-menu-item>
+                                            </volist>
+                                        </el-submenu>
+                                        <else/>
+                                        <el-menu-item index="{$twolvmenu['id']}"
+                                                      @click="toMenuItem('{$twolvmenu.id}', '{$twolvmenu.url}', '{$twolvmenu.name}')">
+                                            <i class="fa fa-{$twolvmenu['icon']} normal"></i>
+                                            <span slot="title">{$twolvmenu['name']}</span>
+                                        </el-menu-item>
+                                    </if>
+                                </volist>
+                            </el-submenu>
+                            <else/>
+                            <el-menu-item index="{$topmenu['id']}"
+                                          @click="toMenuItem('{$topmenu.id}', '{$topmenu.url}', '{$topmenu.name}')">
+                                <i class="fa fa-{$topmenu['icon']} normal"></i>
+                                <span slot="title">{$topmenu['name']}</span>
+                            </el-menu-item>
+                        </if>
+                    </volist>
+                </el-menu>
+            </el-scrollbar>
+        </el-aside>
+        <el-main class="main">
+            <el-tabs v-model="activityTab" @tab-remove="removeTab" class="main-tabs el-container is-vertical"
+                     type="card">
+                <el-tab-pane v-for="item in tabs" :key="item.id" :label="item.name" :name="item.id"
+                             :closable="item.closable" @click="console.log(item.id)">
+                    <iframe :src="item.url" style="width: 100%; height: 100%; display: inline;" frameborder="0"
+                            :id="item.id" class="appiframe"></iframe>
+                </el-tab-pane>
+            </el-tabs>
+        </el-main>
+    </el-container>
+</el-container>
+</body>
+<style>
+    html {
+        height: 100%;
+    }
+
+    body {
+        margin: 0;
+        height: 100%;
+    }
+
+    #app {
+        height: 100%;
+    }
+
+    .el-scrollbar__wrap {
+        overflow-x: hidden;
+    }
+
+    .header {
+        padding: 0;
+        background-color: #2C3E50;
+    }
+
+    .header-logo {
+        display: inline-block;
+        width: 200px;
+        height: 100%;
+        line-height: 40px;
+        text-decoration: none;
+        color: white;
+    }
+
+    .el-tabs__header {
+        border-bottom: none !important;
+        height: 40px;
+    }
+
+    .el-tabs__nav {
+        border: none !important;
+    }
+
+    .el-tabs__item {
+        border-left: none !important;
+        color: white;
+    }
+
+    .el-tabs__item.is-active {
+        border-bottom: none !important;
+    }
+
+    .refresh {
+        z-index: 2;
+        float: left;
+    }
+
+    .refresh .el-button {
+        height: 40px;
+        line-height: 40px;
+        font-size: 22px;
+        padding: 0 10px;
+        color: white;
+    }
+
+    .refresh .el-button:hover {
+        color: #409EFF;
+    }
+
+    .admin-user {
+        position: fixed;
+        right: 20px;
+        top: 0;
+        z-index: 2;
+        height: 40px;
+        line-height: 40px;
+    }
+
+    .admin-user .el-dropdown {
+        cursor: pointer;
+        color: white;
+    }
+
+    .admin-user .el-dropdown:hover {
+        color: #409EFF;
+    }
+
+    aside {
+        border-right: solid 1px #e6e6e6;
+        margin-right: -1px;
+        position: relative;
+        z-index: 1;
+    }
+
+    aside .el-menu {
+        border: none;
+    }
+
+    .btn-list {
+        padding: 10px 0;
+        text-align: center;
+    }
+
+    .btn-list .el-button {
+        margin: 0;
+    }
+
+    .main {
+        margin-top: -40px;
+        padding: 0;
+    }
+
+    .main-tabs {
+        height: 100%;
+    }
+
+    .main-tabs .el-tabs__header {
+        box-sizing: border-box;
+        -ms-flex-negative: 0;
+        flex-shrink: 0;
+        margin: 0;
+    }
+
+    .main-tabs .el-tabs__nav-wrap {
+        margin-right: 180px;
+    }
+
+    .main-tabs .el-tabs__content {
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-box-orient: horizontal;
+        -webkit-box-direction: normal;
+        -ms-flex-direction: row;
+        flex-direction: row;
+        -webkit-box-flex: 1;
+        -ms-flex: 1;
+        flex: 1;
+        -ms-flex-preferred-size: auto;
+        flex-basis: auto;
+        box-sizing: border-box;
+        min-width: 0;
+    }
+
+    .main-tabs .el-tab-pane {
+        display: block;
+        -webkit-box-flex: 1;
+        -ms-flex: 1;
+        flex: 1;
+        -ms-flex-preferred-size: auto;
+        flex-basis: auto;
+        box-sizing: border-box;
+    }
+</style>
+<script>
+    var app = new Vue({
+        el: '#app',
+        mounted() {
+            let _this = this;
+            this.$nextTick(() => {
+                const width = _this.$refs.dropdown.offsetWidth;
+                document.getElementsByClassName('el-tabs__nav-wrap')[0].style.marginRight = width + 30 + 'px';
+            })
+        },
+        data() {
+            return {
+                tabs: [
+                    {
+                        id: 'index',
+                        name: '首页',
+                        url: '/admin/main/index.html',
+                        closable: false
+                    }
+                ],
+                activityTab: 'index'
+            }
+        },
+        methods: {
+            toMenuItem(id, url, name) {
+                for (menu of this.tabs) {
+                    if (menu.id === id) {
+                        this.activityTab = id;
+                        return;
+                    }
+                }
+                this.tabs.push({
+                    id: id,
+                    url: url,
+                    name: name,
+                    closable: true
+                });
+                this.activityTab = id;
+                console.log(this.tabs)
+            },
+            removeTab(targetId) {
+                let tabs = this.tabs;
+                let activeName = this.activityTab;
+                if (activeName === targetId) {
+                    tabs.forEach((tab, index) => {
+                        if (tab.id === targetId) {
+                            let preTab = tabs[index - 1];
+                            if (preTab) {
+                                activeName = preTab.id;
+                            }
+                        }
+                    });
+                }
+
+                this.activityTab = activeName;
+                this.tabs = tabs.filter(tab => tab.id !== targetId);
+            },
+            adminUserClick(command) {
+                switch (command) {
+                    case 'settingSite':
+                        this.toMenuItem('71admin', '/admin/setting/site.html', '网站信息');
+                        break;
+                    case 'userInfo':
+                        this.toMenuItem('index_userinfo', '/admin/user/userinfo.html', '个人信息');
+                        break;
+                    case 'settingPassword':
+                        this.toMenuItem('index_password', '/admin/setting/password.html', '密码修改');
+                        break;
+                    case 'logout':
+                        window.location.href = '/admin/public/logout.html';
+                }
+            },
+            toHome() {
+                window.location.href = "/";
+            },
+            refresh() {
+                document.getElementById(this.activityTab).contentWindow.location.reload()
+            }
+        }
+    });
+</script>
+</html>

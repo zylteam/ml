@@ -1,0 +1,82 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="分销规则" v-loading="onDataLoading">
+            <el-row>
+                <el-col :offset="8" :span="8">
+                    <el-form :model="ruleData" label-width="80px">
+                        <el-form-item label="一级返利:">
+                            <el-input v-model="ruleData.level1.rebate" placeholder="返利比例">
+                                <el-select slot="append" v-model="ruleData.level1.status" placeholder="请选择" style="width: 80px;">
+                                    <el-option label="关闭" :value="0"></el-option>
+                                    <el-option label="开启" :value="1"></el-option>
+                                </el-select>
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item label="二级返利:">
+                            <el-input v-model="ruleData.level2.rebate" placeholder="返利比例">
+                                <el-select slot="append" v-model="ruleData.level2.status" placeholder="请选择" style="width: 80px;">
+                                    <el-option label="关闭" :value="0"></el-option>
+                                    <el-option label="开启" :value="1"></el-option>
+                                </el-select>
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item label="三级返利:">
+                            <el-input v-model="ruleData.level3.rebate" placeholder="返利比例">
+                                <el-select slot="append" v-model="ruleData.level3.status" placeholder="请选择" style="width: 80px;">
+                                    <el-option label="关闭" :value="0"></el-option>
+                                    <el-option label="开启" :value="1"></el-option>
+                                </el-select>
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="submit">保存</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+        </el-tab-pane>
+    </el-tabs>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                ruleData: {$data},
+                onDataLoading: false,
+            }
+        },
+        created () {},
+        methods: {
+            submit () {
+                this.onDataLoading = true;
+                axios.post('/admin/Partner/rule', this.ruleData, {
+                    headers: this.headers
+                }).then((response) => {
+                    this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        this.$message.success('保存成功');
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.onDataLoading = false;
+                    this.$message.error(error.toString())
+                })
+            }
+        }
+    })
+</script>
+</html>

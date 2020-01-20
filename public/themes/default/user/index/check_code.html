@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>核销信息</title>
+
+    <link rel="stylesheet" href="__TMPL__/user/src/style.css">
+
+    <link rel="stylesheet" href="__TMPL__/user/src/iconfont.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.11.0/lib/theme-chalk/index.css">
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.22/dist/vue.js"></script>
+
+    <script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+
+    <script src="https://unpkg.com/element-ui@2.11.0/lib/index.js"></script>
+
+</head>
+
+<style>
+
+
+
+    .bot {
+
+        position: fixed;
+
+        left: 0;
+
+        bottom: 0;
+
+        width: 100%;
+
+        background: #fff;
+
+        box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.1);
+
+    }
+
+
+
+    input {
+
+        background: #fff;
+
+        border: none;
+
+        line-height: 1;
+
+    }
+
+
+
+    .storePic img {
+
+        width: 5rem;
+
+        height: 5rem;
+
+        border-radius: 0.8rem;
+
+    }
+
+
+
+    .pl15 {
+
+        padding-left: 1.5rem;
+
+    }
+
+
+
+    .pt05 {
+
+        padding-top: 0.3rem;
+
+    }
+
+
+
+    .pt03 {
+
+        padding-top: 0.15rem;
+
+    }
+
+
+
+    .infopic img {
+
+        width: 4.8rem;
+
+        height: 4.8rem;
+
+        border-radius: 0.5rem;
+
+        margin-left: 0.5rem;
+
+        margin-bottom: 0.5rem;
+
+    }
+
+
+
+    .btn3 {
+
+        width: 88%;
+
+        margin-left: 6%;
+
+        text-align: center;
+
+        height: 2.8rem;
+
+        line-height: 2.8rem;
+
+        background: #fff028;
+
+        border-radius: 1.3rem;
+
+        color: #333;
+
+        margin-top: 3rem;
+
+    }
+
+</style>
+
+
+
+<body>
+
+<div id="app">
+
+    <if condition="$order_info neq ''">
+
+        <div class="top flex text-c" id="headerTop">
+
+            <i class="iconfont icon-left" onclick="goBack()"></i>
+
+            <p class="flex_f1">核销信息</p>
+
+            <span></span>
+
+        </div>
+
+
+
+        <div class="m25 p_l_r25 bc_fff">
+
+            <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+
+                <i class="iconfont icon-dingdan" style="width: 1.5rem"></i>
+
+                <span class="">订单信息</span>
+
+            </div>
+
+            <div class="flex pl15  pt20  fontsize28 lineheight1 ">
+
+                <span class="c_666 w_5 pt03">订单号</span>
+
+                <span class="c_666"> ：</span>
+
+                <p class="">{$order_info.order_sn}</p>
+
+            </div>
+
+            <div class="flex pl15  pt20  fontsize28 lineheight1 ">
+
+                <span class="c_666 w_5 pt03">团品名称</span>
+
+                <span class="c_666"> ：</span>
+
+                <p>{$order_info.product.product_name}</p>
+
+            </div>
+
+            <div class="flex pl15  pt20  fontsize28 lineheight1 ">
+
+                <span class="c_666 w_5 pt03">优惠券名称</span>
+
+                <span class="c_666"> ：</span>
+
+                <p>{$order_info.coupon.name}</p>
+
+            </div>
+
+            <div class="flex pl15  pt20  fontsize28 lineheight1 ">
+
+                <span class="c_666 w_5 pt03">使用状态</span>
+
+                <span class="c_666"> ：</span>
+
+                <p>{$order_info.use_status}</p>
+
+            </div>
+
+            <div class="flex pl15  pt20  fontsize28 lineheight1 ">
+
+                <span class="c_666 w_5 pt05">套餐内容</span>
+
+                <span class="c_666"> ：</span>
+
+                <div style="line-height:1.5;width: 71%">
+
+                    <p>{$order_info.product.detail}</p>
+
+                </div>
+
+            </div>
+
+            <div class="flex pl15  pt20  fontsize28 lineheight1">
+
+                <span class="c_666 w_5 pt03">购买人姓名</span>
+
+                <span class="c_666"> ：</span>
+
+                <p class="">{$order_info.user_info.user_nickname}</p>
+
+            </div>
+
+            <div class="flex pl15  pt20  fontsize28 lineheight1">
+
+                <span class="c_666 w_5 pt03">联系方式</span>
+
+                <span class="c_666"> ：</span>
+
+                <p class="">{$order_info.mobile}</p>
+
+            </div>
+
+            <div class="flex pl15  pt20 fontsize28 lineheight1 ">
+
+                <span class="c_666 w_5 pt05">图 片</span>
+
+                <span class="c_666"> ：</span>
+
+                <div style="line-height:1.5" class="infopic">
+
+                    <volist name="order_info.product.product_img" id="vo">
+
+                        <img src="{$vo}" alt="">
+
+                    </volist>
+
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <p class="btn3 fontsize30 mb25" @click="checkCode()">确认核销</p>
+
+        <else/>
+
+        <div class="top flex text-c" id="headerTop">
+
+            <i class="iconfont icon-left" onclick="goBack()"></i>
+
+            <p class="flex_f1" >核销信息</p>
+
+            <span></span>
+
+        </div>
+
+    </if>
+
+</div>
+
+</body>
+
+<script>
+function goBack(){
+    window.history.back(-1); 
+}
+    var app = new Vue({
+
+        el: '#app',
+
+        data: function () {
+
+            return {
+
+                check_code: '',
+
+                openid: '',
+
+            }
+
+        },
+
+        created() {
+
+            this.openid = "{$user_openid}";
+
+            this.check_code = "{$order_info.check_code}";
+
+        },
+
+        methods: {
+
+            checkCode() {
+
+                let _this = this;
+
+                axios.post("{:url('api/store/confirm_check_code')}", {
+
+                    openid: _this.openid,
+
+                    check_code: _this.check_code
+
+                }, {
+
+                    headers: {
+
+                        'X-Requested-With': 'XMLHttpRequest',
+
+                    }
+
+                }).then(function (response) {
+
+                    if (response.data.code === 1) {
+
+                        _this.$message({
+
+                            message: response.data.msg, type: 'success'
+
+                        });
+
+
+
+                    } else {
+
+                        _this.$message.error(response.data.msg);
+
+                    }
+
+                })
+
+            }
+
+        },
+
+
+
+    });
+
+</script>
+
+</html>

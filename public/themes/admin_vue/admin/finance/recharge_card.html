@@ -1,0 +1,265 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="充值卡" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="卡号:">
+                            <el-input v-model="form.num" placeholder="卡号" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="状态:">
+                            <el-select v-model="form.type" placeholder="类型">
+                                <el-option v-for="(item, index) in type" :key="index" :label="item" :value="index"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null)" icon="el-icon-plus">新增充值卡</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="60"></el-table-column>
+                <el-table-column prop="num" label="卡号" min-width="180"></el-table-column>
+                <el-table-column prop="password" label="密码" min-width="100"></el-table-column>
+                <el-table-column prop="type" label="优惠券种类" width="140">
+                    <template slot-scope="scope">
+                        {{type[scope.row.type]}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="value" label="金额" min-width="80"></el-table-column>
+                <el-table-column prop="status" label="状态" min-width="100">
+                    <template slot-scope="scope">
+                        <el-switch v-model="scope.row.status" :active-value="1" :inactive-value="0" active-text="开" inactive-text="关" @change="(value) => {handleStatus(scope.row, value)}"></el-switch>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="end_time" label="有效期" width="120">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.end_time)}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="use_time" label="使用状态" width="120">
+                    <template slot-scope="scope">
+                        <template v-if="scope.row.use_time">已使用</template>
+                        <template v-else>未使用</template>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="50">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="del(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading" title="充值卡生成">
+        <el-form :model="editForm" label-width="100px">
+            <el-form-item label="充值卡类型:">
+                <el-select v-model="editForm.type" placeholder="请选择">
+                    <el-option v-for="(item, index) in type" :key="index" :label="item" :value="index"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="金额:">
+                <el-input-number v-model="editForm.value" :min="100" :step="100" size="small"></el-input-number>
+            </el-form-item>
+            <el-form-item label="有效期:">
+                <el-date-picker v-model="editForm.end_time" type="date" value-format="timestamp" placeholder="选择日期"></el-date-picker>
+            </el-form-item>
+            <el-form-item label="开卡张数:">
+                <el-input-number v-model="editForm.num" :min="1" :step="1" size="small"></el-input-number>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">退出</el-button>
+            <el-button type="primary" @click="submit">保存</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    num: '',
+                    type: ''
+                },
+                editForm: {},
+                dialogVisible: false,
+                dialogLoading: false,
+
+                type: ['普通会员充值卡', '企业福利卡', '尊贵会员福利卡']
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    num: '',
+                    type: ''
+                };
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.num !== ''){
+                    params.num = this.form.num;
+                }
+                if (this.form.type !== ''){
+                    params.type = this.form.type;
+                }
+                axios.get('/admin/finance/rechargeCard', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            edit (row) {
+                this.editForm = {
+                    type: 0,
+                    value: 100,
+                    end_time: null,
+                    num: 1
+                };
+                this.dialogVisible = true;
+            },
+            submit () {
+                let _this = this;
+                let params = {
+                    type: this.editForm.type,
+                    value: this.editForm.value,
+                    end_time: this.editForm.end_time / 1000,
+                    num: this.editForm.num
+                };
+                this.dialogLoading = true;
+                axios.post('/admin/finance/rechargeCardCreate', params, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('新增完成');
+                        _this.dialogVisible = false;
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            handleStatus (row, value) {
+                let _this = this;
+                let msg = '此操作将上线此充值卡，是否继续?';
+                if (value === 0) {
+                    msg = '此操作将下线此充值卡，是否继续?';
+                }
+                this.$confirm(msg, '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _this.onDataLoading = true;
+                    axios.post('/admin/finance/setRechargeCardStatus', {
+                        id: row.id,
+                        status: value
+                    }, {
+                        headers: _this.headers
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            if (value === 1) {
+                                _this.$message.success('成功开启');
+                            } else {
+                                _this.$message.success('成功关闭');
+                            }
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    row.status = value === 0 ? 1 : 0;
+                    this.$message.info('取消操作');
+                });
+            },
+            del (id) {
+                let _this = this;
+                this.$confirm('此操作将永久删除该充值卡，是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _this.onDataLoading = true;
+                    axios.post('/admin/finance/rechargeCardDel', {
+                        id: id
+                    }, {
+                        headers: _this.headers
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            _this.$message.success('删除成功');
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message.info('取消删除');
+                });
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

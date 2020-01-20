@@ -1,0 +1,515 @@
+<include file="public@header_vue"/>
+<script src="//unpkg.com/wangeditor@3.1.1/release/wangEditor.min.js"></script>
+<style>
+    .el-pagination {
+        margin-top: 20px;
+    }
+
+    .avatar {
+        width: 40px;
+        height: auto;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .avatar-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 178px;
+        height: 178px;
+        line-height: 178px;
+        text-align: center;
+    }
+
+    .avatar {
+        width: 178px;
+        height: 178px;
+        display: block;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .photos {
+        width: 120px;
+        height: 120px;
+        border-radius: 6px;
+        overflow: hidden;
+        float: left;
+        margin-right: 10px;
+        margin-bottom: 10px;
+        position: relative;
+    }
+
+    .photos-options {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 120px;
+        line-height: 120px;
+        width: 120px;
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.6);
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.6s;
+    }
+
+    .photos:hover .photos-options {
+        opacity: 1;
+    }
+
+    .photos-options .el-button {
+        font-size: 24px;
+        color: white
+    }
+
+    .photos img {
+        width: 120px;
+        height: 120px;
+    }
+
+    .photos-uploader {
+        width: 120px;
+        height: 120px;
+        float: left;
+    }
+
+    .logo-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .logo-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .logo-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 120px;
+        height: 120px;
+        line-height: 120px;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="优惠券列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" class="demo-form-inline" size="mini">
+                        <el-form-item label="关键字:">
+                            <el-input v-model="form.keyword" placeholder="关键字"></el-input>
+                        </el-form-item>
+                        <el-form-item label="选择店铺:">
+                            <el-select v-model="form.store_id" placeholder="请选择店铺">
+                                <el-option v-for="item in storeList" :key="item.id" :label="item.store_name"
+                                           :value="item.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null)">新增</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="ID" width="50"></el-table-column>
+                <el-table-column prop="name" label="优惠券名称"></el-table-column>
+                <el-table-column prop="product.product_name" label="团品名称"></el-table-column>
+                <el-table-column prop="store.store_name" label="店铺名称"></el-table-column>
+                <el-table-column prop="user_coupon_count" label="销量"></el-table-column>
+                <el-table-column prop="is_show" label="是否使用">
+                    <template slot-scope="scope">
+                        <el-switch
+                                v-model="scope.row.is_show"
+                                active-color="#13ce66"
+                                :active-value="0"
+                                :inactive-value="1"
+                                @change="change_status('is_show',scope.row.is_show,scope.row.id)"
+                                inactive-color="#ff4949">
+                        </el-switch>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="value1" label="消费金额"></el-table-column>
+                <el-table-column prop="value2" label="减免金额"></el-table-column>
+                <el-table-column prop="add_time" label="创建时间" min-width="120">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.add_time)}}
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="180">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="edit(scope.row)">编辑</el-button>
+                        <el-button size="mini" type="text" @click="delete_coupon(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="total,prev, pager, next" :total="totalNum" :page-size="10"
+                           :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <!--优惠券添加-->
+    <el-dialog title="添加优惠券" :visible.sync="dialogCouponVisible"
+               v-loading.fullscreen="dialogLoading" width="62%">
+        <el-form :model="coupon_form" class="demo-form-inline" :rules="coupon_rules" ref="coupon_form"
+                 label-width="130px">
+            <el-form-item label="优惠券名称" prop="name">
+                <el-col :span="24">
+                    <el-input v-model="coupon_form.name" placeholder="优惠券名称"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="限制张数" prop="limit_count">
+                <el-col :span="24">
+                    <el-input v-model="coupon_form.limit_count" placeholder="限制张数"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="使用时间" prop="use_time">
+                <el-col :span="24">
+                    <el-date-picker
+                            v-model="coupon_form.use_time"
+                            type="daterange"
+                            value-format="yyyy-M-d"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期">
+                    </el-date-picker>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="选择店铺" prop="store_id">
+                <el-col :span="24">
+                    <el-select v-model="coupon_form.store_id" placeholder="选择店铺" @change="change_product">
+                        <el-option v-for="store in store_option " :key="store.id" :label="store.store_name"
+                                   :value="store.id"></el-option>
+                    </el-select>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="选择团品" prop="product_id">
+                <el-col :span="24">
+                    <el-select v-model="coupon_form.product_id" placeholder="选择团品">
+                        <el-option v-for="product in product_option " :key="product.id" :label="product.product_name"
+                                   :value="product.id"></el-option>
+                    </el-select>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="消费金额" prop="value1">
+                <el-col :span="24">
+                    <el-input v-model="coupon_form.value1" placeholder="消费金额"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="减免金额" prop="value2">
+                <el-col :span="24">
+                    <el-input v-model="coupon_form.value2" placeholder="减免金额"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="优惠券详细" prop="detail">
+                <el-col :span="24">
+                    <div ref="editor1" style="text-align:left"></div>
+                </el-col>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button v-if="coupon_form.id == 0 " type="primary" @click="submit('coupon_form')">新增</el-button>
+            <el-button v-else="" type="primary" @click="submit('coupon_form')">修改</el-button>
+        </span>
+    </el-dialog>
+</div>
+<script>
+    var E = window.wangEditor;
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                tableData: [],
+                store_option: [],
+                product_option: [],
+                onDataLoading: false,
+                dialogLoading: false,
+                product_id: 0,
+                form: {
+                    keyword: '',
+                    store_id: ''
+                },
+                storeList: {$store_list},
+                currentPage: 1,
+                editor: null,
+                totalNum: 0,
+                dialogCouponVisible: false,
+                coupon_form: {
+                    name: '',
+                    detail: '',
+                    limit_count: 0,
+                    value1: 0,
+                    value2: 0,
+                    store_id: 0,
+                    product_id: 0,
+                    use_time: '',
+                },
+                coupon_rules: {
+                    name: [{required: true, message: '请输入优惠券名称', trigger: 'blur'}],
+                    use_time: [{required: true, message: '请选择优惠券使用时间', trigger: 'blur'}],
+                    value1: [{required: true, message: '请输入消费金额', trigger: 'blur'}],
+                    value2: [{required: true, message: '请输入减免金额', trigger: 'blur'}],
+                    store_id: [{required: true, message: '请选择店铺', trigger: 'blur'}],
+                    product_id: [{required: true, message: '请选择团品', trigger: 'blur'}],
+                },
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            };
+        },
+        created() {
+            this.product_id = JSON.parse('{$product_id|default=0}');
+            this.form.store_id = JSON.parse('{$store_id|default=0}');
+            this.getData();
+        },
+        methods: {
+            clearForm() {
+                this.form = {
+                    keyword: '',
+                    store_id: ''
+                }
+            },
+            init_store() {
+                let _this = this;
+                _this.onDataLoading = true;
+                axios.get('/admin/coupon/get_all_store', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    console.log(response);
+                    _this.store_option = response.data;
+                    _this.onDataLoading = false;
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            submit(form) {
+                let _this = this;
+                _this.dialogLoading = true;
+                if (form == 'coupon_form') {
+                    this.$refs[form].validate((valid) => {
+                        if (valid) {
+                            axios.post('/admin/coupon/update_coupon', this.coupon_form, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            }).then(function (response) {
+                                _this.dialogLoading = false;
+                                if (response.data.code === 1) {
+                                    if (_this.coupon_form.id === '') {
+                                        _this.$message.success('新增完成');
+                                    } else {
+                                        _this.$message.success('修改成功');
+                                    }
+                                    _this.dialogCouponVisible = false;
+                                    _this.getData();
+                                } else {
+                                    _this.$message.warning(response.data.msg);
+                                }
+                            }).catch(function (error) {
+                                _this.dialogLoading = false;
+                                _this.$message.error(error.toString())
+                            })
+                        } else {
+                            console.log('error submit!!');
+                            _this.dialogLoading = false;
+                            return false;
+                        }
+                    });
+                }
+            },
+            getData(page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (_this.form.store_id !== '') {
+                    params.store_id = this.form.store_id;
+                }
+                if (_this.product_id != 0) {
+                    params.product_id = this.product_id
+                }
+                if (_this.form.keyword != 0) {
+                    params.keyword = _this.form.keyword
+                }
+                console.log(params);
+                axios.get('/admin/coupon/list', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+                    console.log(response);
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.list;
+                        _this.totalNum = response.data.data.count;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            edit(row) {
+                let _this = this;
+                if (row) {
+                    _this.coupon_form = JSON.parse(JSON.stringify(row));
+                } else {
+                    _this.coupon_form = {
+                        name: '',
+                        detail: '',
+                        limit_count: 0,
+                        value1: 0,
+                        value2: 0,
+                        store_id: '',
+                        product_id: '',
+                        use_time: '',
+                    }
+                }
+                _this.init_store();
+                if (_this.coupon_form.store_id && _this.coupon_form.product_id) {
+                    params = {id: _this.coupon_form.store_id}
+                    axios.get('/admin/coupon/get_all_product_by_id', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        params: params
+                    }).then(function (response) {
+                        console.log(response);
+                        _this.product_option = response.data;
+                        _this.onDataLoading = false;
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                } else {
+                    _this.product_option = [];
+                }
+                if (_this.editor1 == null) {
+                    setTimeout(function () {
+                        _this.editor1 = new E(_this.$refs.editor1);
+                        _this.editor1.customConfig.uploadImgServer = '/api/upload/photoUpload';
+                        _this.editor1.customConfig.uploadFileName = 'file';
+                        _this.editor1.customConfig.uploadImgMaxLength = 1;
+                        _this.editor1.customConfig.onchange = (html) => {
+                            _this.coupon_form.detail = html
+                        };
+                        _this.editor1.create();
+                        _this.editor1.txt.html(_this.coupon_form.detail);
+                    }, 1000);
+                } else {
+                    _this.editor1.txt.clear();
+                    _this.editor1.txt.html(this.coupon_form.detail);
+                }
+
+                // this.coupon_form.store_id = this.product_form.store_id;
+                // this.coupon_form.product_id = this.product_form.id;
+                _this.dialogCouponVisible = true;
+            },
+            change_product(event, item) {
+                let _this = this;
+                _this.onDataLoading = true;
+                params = {id: event}
+                console.log(event)
+                axios.get('/admin/coupon/get_all_product_by_id', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+                    console.log(response);
+                    _this.product_option = response.data;
+                    _this.onDataLoading = false;
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            change_status(field, value, id) {
+                let _this = this;
+                this.dialogLoading = true;
+                params = {field: field, value: value, id: id};
+                axios.post('/admin/coupon/change_status', params, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('修改完成');
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                })
+            },
+            delete_coupon(row) {
+                let _this = this;
+                _this.dialogLoading = true;
+                if (row) {
+                    params = {field: 'is_delete', value: 1, id: row};
+                    axios.post('/admin/coupon/change_status', params, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    }).then(function (response) {
+                        _this.dialogLoading = false;
+                        if (response.data.code === 1) {
+                            _this.$message.success('删除完成');
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.dialogLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }
+            },
+            formatDate(timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDay()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+            },
+            prefix(num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    });
+</script>

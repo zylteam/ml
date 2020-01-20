@@ -1,0 +1,126 @@
+[2019-08-08 16:37:17] NULL.INFO: >>>>>>>>
+POST /pay/unifiedorder HTTP/1.1
+Content-Length: 543
+User-Agent: GuzzleHttp/6.3.3 curl/7.62.0 PHP/7.3.6
+Host: api.mch.weixin.qq.com
+
+<xml><mch_id>1546962141</mch_id><nonce_str><![CDATA[5d4bdf3dcfba9]]></nonce_str><body><![CDATA[aaaaa]]></body><out_trade_no><![CDATA[poaaa04+65467496876541]]></out_trade_no><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><openid><![CDATA[oWQBX49s6uWCCW0Z-XHTEmfUKZJ0]]></openid><spbill_create_ip><![CDATA[121.226.51.123]]></spbill_create_ip><appid><![CDATA[wx1a9d07b7709a995b]]></appid><notify_url><![CDATA[https://ml.0513app.cn/api/wechat/notify]]></notify_url><sign><![CDATA[D14585B9367D8C6648C2879E0E3DDDBC]]></sign></xml>
+<<<<<<<<
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 08 Aug 2019 08:37:17 GMT
+Content-Type: text/plain
+Content-Length: 113
+Connection: keep-alive
+Keep-Alive: timeout=8
+
+<xml><return_code><![CDATA[FAIL]]></return_code>
+<return_msg><![CDATA[invalid out_trade_no]]></return_msg>
+</xml>
+--------
+NULL  
+[2019-08-08 16:37:44] NULL.INFO: >>>>>>>>
+POST /pay/unifiedorder HTTP/1.1
+Content-Length: 543
+User-Agent: GuzzleHttp/6.3.3 curl/7.62.0 PHP/7.3.6
+Host: api.mch.weixin.qq.com
+
+<xml><mch_id>1546962141</mch_id><nonce_str><![CDATA[5d4bdf57dc324]]></nonce_str><body><![CDATA[aaaaa]]></body><out_trade_no><![CDATA[poaaa04+65467496876541]]></out_trade_no><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><openid><![CDATA[oWQBX49s6uWCCW0Z-XHTEmfUKZJ0]]></openid><spbill_create_ip><![CDATA[121.226.51.123]]></spbill_create_ip><appid><![CDATA[wx1a9d07b7709a995b]]></appid><notify_url><![CDATA[https://ml.0513app.cn/api/wechat/notify]]></notify_url><sign><![CDATA[510CC7FE6AA924E111FB8244D98BA5DB]]></sign></xml>
+<<<<<<<<
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 08 Aug 2019 08:37:44 GMT
+Content-Type: text/plain
+Content-Length: 113
+Connection: keep-alive
+Keep-Alive: timeout=8
+
+<xml><return_code><![CDATA[FAIL]]></return_code>
+<return_msg><![CDATA[invalid out_trade_no]]></return_msg>
+</xml>
+--------
+NULL  
+[2019-08-08 16:37:58] NULL.INFO: >>>>>>>>
+POST /pay/unifiedorder HTTP/1.1
+Content-Length: 543
+User-Agent: GuzzleHttp/6.3.3 curl/7.62.0 PHP/7.3.6
+Host: api.mch.weixin.qq.com
+
+<xml><mch_id>1546962141</mch_id><nonce_str><![CDATA[5d4bdf66b160d]]></nonce_str><body><![CDATA[aaaaa]]></body><out_trade_no><![CDATA[poaaa04165467496876541]]></out_trade_no><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><openid><![CDATA[oWQBX49s6uWCCW0Z-XHTEmfUKZJ0]]></openid><spbill_create_ip><![CDATA[121.226.51.123]]></spbill_create_ip><appid><![CDATA[wx1a9d07b7709a995b]]></appid><notify_url><![CDATA[https://ml.0513app.cn/api/wechat/notify]]></notify_url><sign><![CDATA[B560F9A0FDE1BDCB789A455754ECDC11]]></sign></xml>
+<<<<<<<<
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 08 Aug 2019 08:37:58 GMT
+Content-Type: text/plain
+Content-Length: 456
+Connection: keep-alive
+Keep-Alive: timeout=8
+
+<xml><return_code><![CDATA[SUCCESS]]></return_code>
+<return_msg><![CDATA[OK]]></return_msg>
+<appid><![CDATA[wx1a9d07b7709a995b]]></appid>
+<mch_id><![CDATA[1546962141]]></mch_id>
+<nonce_str><![CDATA[M7nBOJt9TXsBkCni]]></nonce_str>
+<sign><![CDATA[9F311655500DC476C1A670A2C073F2B5]]></sign>
+<result_code><![CDATA[SUCCESS]]></result_code>
+<prepay_id><![CDATA[wx08163758864177da7ca9aa971520469400]]></prepay_id>
+<trade_type><![CDATA[JSAPI]]></trade_type>
+</xml>
+--------
+NULL  
+[2019-08-08 16:38:25] NULL.INFO: >>>>>>>>
+POST /pay/unifiedorder HTTP/1.1
+Content-Length: 536
+User-Agent: GuzzleHttp/6.3.3 curl/7.62.0 PHP/7.3.6
+Host: api.mch.weixin.qq.com
+
+<xml><mch_id>1546962141</mch_id><nonce_str><![CDATA[5d4bdf80c373d]]></nonce_str><body><![CDATA[aaaaa]]></body><out_trade_no><![CDATA[poaaa1565253504]]></out_trade_no><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><openid><![CDATA[oWQBX49s6uWCCW0Z-XHTEmfUKZJ0]]></openid><spbill_create_ip><![CDATA[121.226.51.123]]></spbill_create_ip><appid><![CDATA[wx1a9d07b7709a995b]]></appid><notify_url><![CDATA[https://ml.0513app.cn/api/wechat/notify]]></notify_url><sign><![CDATA[61E0CB32B3B320F4E49DC946A4AF5FC9]]></sign></xml>
+<<<<<<<<
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 08 Aug 2019 08:38:25 GMT
+Content-Type: text/plain
+Content-Length: 456
+Connection: keep-alive
+Keep-Alive: timeout=8
+
+<xml><return_code><![CDATA[SUCCESS]]></return_code>
+<return_msg><![CDATA[OK]]></return_msg>
+<appid><![CDATA[wx1a9d07b7709a995b]]></appid>
+<mch_id><![CDATA[1546962141]]></mch_id>
+<nonce_str><![CDATA[kyTtpWtlYUkCCpZz]]></nonce_str>
+<sign><![CDATA[538C44524C33AF0BEAF97EC7C43F42CD]]></sign>
+<result_code><![CDATA[SUCCESS]]></result_code>
+<prepay_id><![CDATA[wx08163824980516177c3e113c1773835000]]></prepay_id>
+<trade_type><![CDATA[JSAPI]]></trade_type>
+</xml>
+--------
+NULL  
+[2019-08-08 16:40:18] NULL.INFO: >>>>>>>>
+POST /pay/unifiedorder HTTP/1.1
+Content-Length: 535
+User-Agent: GuzzleHttp/6.3.3 curl/7.62.0 PHP/7.3.6
+Host: api.mch.weixin.qq.com
+
+<xml><mch_id>1546962141</mch_id><nonce_str><![CDATA[5d4bdff20c227]]></nonce_str><body><![CDATA[aaaaa]]></body><out_trade_no><![CDATA[poaaa1565253618]]></out_trade_no><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><openid><![CDATA[oWQBX49s6uWCCW0Z-XHTEmfUKZJ0]]></openid><spbill_create_ip><![CDATA[121.226.51.123]]></spbill_create_ip><appid><![CDATA[wx1a9d07b7709a995b]]></appid><notify_url><![CDATA[http://ml.0513app.cn/api/wechat/notify]]></notify_url><sign><![CDATA[738169AD1961B7C5455E633C2AC455B2]]></sign></xml>
+<<<<<<<<
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 08 Aug 2019 08:40:18 GMT
+Content-Type: text/plain
+Content-Length: 456
+Connection: keep-alive
+Keep-Alive: timeout=8
+
+<xml><return_code><![CDATA[SUCCESS]]></return_code>
+<return_msg><![CDATA[OK]]></return_msg>
+<appid><![CDATA[wx1a9d07b7709a995b]]></appid>
+<mch_id><![CDATA[1546962141]]></mch_id>
+<nonce_str><![CDATA[NP8aylCYDDCNrgPr]]></nonce_str>
+<sign><![CDATA[2597867B4967D49F30231B2C4975449D]]></sign>
+<result_code><![CDATA[SUCCESS]]></result_code>
+<prepay_id><![CDATA[wx08164018164242a8bd75f6791510521500]]></prepay_id>
+<trade_type><![CDATA[JSAPI]]></trade_type>
+</xml>
+--------
+NULL  

@@ -1,0 +1,785 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+.avatar-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.avatar-uploader .el-upload:hover {
+    border-color: #409EFF;
+}
+.avatar-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+    width: 160px;
+    height: 90px;
+    line-height: 90px;
+    text-align: center;
+}
+.avatar {
+    width: 160px;
+    height: 90px;
+    display: block;
+}
+.banner-img {
+    width: 100%;
+    border-radius: 4px;
+}
+.add-goods {
+    height: 32px;
+    line-height: 30px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="优惠券" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="优惠券名称:">
+                            <el-input v-model="form.name" placeholder="优惠券名称" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="状态:">
+                            <el-select v-model="form.status" placeholder="请选择">
+                                <el-option label="已过期" :value="0"></el-option>
+                                <el-option label="可发放" :value="1"></el-option>
+                                <el-option label="已发放" :value="2"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null, 1)" icon="el-icon-plus">新增优惠券</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="50"></el-table-column>
+                <el-table-column prop="name" label="优惠券名称" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="type" label="优惠券种类" width="140">
+                    <template slot-scope="scope">
+                        {{type[scope.row.type]}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="type" label="优惠力度" width="140">
+                    <template slot-scope="scope">
+                        <template v-if="scope.row.type === 0">
+                            满{{scope.row.threshold}}减{{scope.row.strength}}
+                        </template>
+                        <template v-if="scope.row.type === 1">
+                            {{scope.row.strength}}折
+                        </template>
+                        <template v-if="scope.row.type === 2">
+                            抵扣￥{{scope.row.strength}}
+                        </template>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="total" label="数量" min-width="100">
+                    <template slot-scope="scope">
+                        {{scope.row.total === 0 ? '不限量' : scope.row.total}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="status" label="状态" min-width="100">
+                    <template slot-scope="scope">
+                        {{status[scope.row.status]}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="term_type" label="有效期" width="190">
+                    <template slot-scope="scope">
+                        <template v-if="scope.row.term_type === 0">
+                            派发当日有效
+                        </template>
+                        <template v-if="scope.row.term_type === 1">
+                            派发{{scope.row.end_time}}日内有效
+                        </template>
+                        <template v-if="scope.row.term_type === 2">
+                            {{formatDate(scope.row.start_time)}} - {{formatDate(scope.row.end_time)}}
+                        </template>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="130">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="toGiveCoupon(scope.row)" :disabled="scope.row.status != 1">发放</el-button>
+                        <el-button size="mini" type="text" @click="edit(scope.row, 0)">编辑</el-button>
+                        <el-button size="mini" type="text" @click="del(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading" title="优惠券"  :class="{'edit-able': editState === 1}">
+        <el-form :model="editForm" label-width="100px" :disabled="editState === 0">
+            <el-form-item label="优惠券名称:">
+                <el-input v-model="editForm.name" placeholder="优惠券名称"></el-input>
+            </el-form-item>
+            <el-form-item label="优惠券类型:">
+                <el-select v-model="editForm.type" placeholder="请选择">
+                    <el-option v-for="(item, index) in type" :key="index" :label="item" :value="index"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="优惠力度:" v-if="editForm.type !== null">
+                <template v-if="editForm.type === 0">
+                    满 <el-input-number v-model="editForm.threshold" :min="0.01" :step="0.01" size="small"></el-input-number>
+                    减 <el-input-number v-model="editForm.reduction_strength" :min="0" :step="1" size="small"></el-input-number>
+                </template>
+                <template v-if="editForm.type === 1">
+                    <el-input-number v-model="editForm.discount_strength" :min="0.1" :step="0.1" size="small"></el-input-number> 折
+                </template>
+                <template v-if="editForm.type === 2">
+                    <el-input-number v-model="editForm.cash_strength" :min="0" size="small"></el-input-number> 元
+                </template>
+            </el-form-item>
+            <el-form-item label="范围类型:">
+                <el-select v-model="editForm.range_type" placeholder="请选择">
+                    <el-option v-for="(item, index) in rangeType" :key="index" :label="item" :value="index"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="优惠范围:" v-if="editForm.range_type !== null && editForm.range_type !== 0">
+                <template v-if="editForm.range_type === 1">
+                    <el-select v-model="editForm.category_range" placeholder="请选择商品类别" multiple>
+                        <el-option v-for="item in categoryList" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                    </el-select>
+                </template>
+                <template v-if="editForm.range_type === 2">
+                    <el-tag style="margin-right: 10px" type="success" v-for="goods in editForm.goods_range">{{goods.id}} - {{goods.name}}</el-tag>
+                    <el-button class="add-goods" size="small" @click="toChoseGoods">增加商品</el-button>
+                </template>
+            </el-form-item>
+            <el-form-item label="有效期类型:">
+                <el-select v-model="editForm.term_type" placeholder="请选择">
+                    <el-option v-for="(item, index) in termType" :key="index" :label="item" :value="index"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="有效期:" v-if="editForm.term_type !== null && editForm.term_type !== 0">
+                <template v-if="editForm.term_type === 1">
+                    <el-input-number v-model="editForm.days" :min="0" size="small"></el-input-number> 天
+                </template>
+                <template v-if="editForm.term_type === 2">
+                    <el-date-picker v-model="editForm.duration" type="daterange" value-format="timestamp" :picker-options="durationOptions" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" clearable></el-date-picker>
+                </template>
+            </el-form-item>
+        </el-form>
+        <el-form :model="editForm" label-width="100px">
+            <el-form-item label="数量:">
+                <el-input-number v-model="editForm.total" :min="0" size="small"></el-input-number>
+                <div class="el-form-item__error">
+                    设置为0时为无限量优惠券
+                </div>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">退出</el-button>
+            <el-button type="primary" @click="submit">保存</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog :visible.sync="onChoseGoods" width="60%" title="选择参加商品"  :class="{'edit-able': editState === 1}">
+        <el-row>
+            <el-col :span="24">
+                <el-form :inline="true" :model="goodsChoseForm" size="mini">
+                    <el-form-item label="商品名称：">
+                        <el-input placeholder="商品名称" v-model="goodsChoseForm.name" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item label="商品类别：">
+                        <el-cascader  expand-trigger="hover" :options="categoryTree" v-model="goodsChoseForm.category" > </el-cascader>
+                    </el-form-item>
+                    <el-form-item label="商品价格：">
+                        <el-input placeholder="最低价格" v-model="goodsChoseForm.price[0]" clearable style="width: 100px"></el-input> -
+                        <el-input placeholder="最高价格" v-model="goodsChoseForm.price[1]" clearable style="width: 100px"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="getGoodsData()">查询</el-button>
+                        <el-button type="danger" @click="clearGoodsChoseForm()">清空</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+        <el-table :data="goodsTableData" style="width: 100%" v-loading="goodsDialogLoading">
+            <el-table-column prop="id" label="#" width="80"></el-table-column>
+            <el-table-column prop="name" label="商品名称" min-width="120" show-overflow-tooltip=""></el-table-column>
+            <el-table-column prop="category_name" label="商品分类" width="120">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.category_name}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="spec" label="规格" width="100"></el-table-column>
+            <el-table-column prop="price" label="单价" width="100">
+                <template slot-scope="scope">
+                    {{scope.row.price}}元
+                </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="60">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.status === 0">下架</span>
+                    <span v-if="scope.row.status === 1">上架</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" fixed="right" width="60">
+                <template slot-scope="scope">
+                    <el-button size="mini" type="text" @click="choseGoods(scope.row)">选择</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination background layout="total,prev, pager, next" :total="goodsTotalNum" :current-page.sync="goodsCurrentPage" @current-change="getGoodsData"></el-pagination>
+    </el-dialog>
+    <el-dialog :visible.sync="onGiveCoupon" width="60%" v-loading.fullscreen="giveCouponLoading" title="发放优惠券">
+        <el-form :model="giveCouponForm" label-width="100px">
+            <el-form-item label="优惠券ID:">
+                {{giveCouponForm.id}}
+            </el-form-item>
+            <el-form-item label="发放范围:">
+                <el-radio-group v-model="giveCouponForm.range_type">
+                    <el-radio :label="0">指定用户</el-radio>
+                    <el-radio :label="1">全部用户</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="指定用户:" v-if="giveCouponForm.range_type === 0">
+                <el-tag style="margin-right: 10px" type="success" v-for="user in giveCouponForm.users">{{user.user_nickname}}</el-tag>
+                <el-button class="add-goods" size="small" @click="toChoseUser">增加用户</el-button>
+            </el-form-item>
+            <el-form-item label="发放日期:">
+                <el-date-picker v-model="giveCouponForm.active_time" type="date" value-format="timestamp" placeholder="选择日期"></el-date-picker>
+            </el-form-item>
+            <el-form-item label="发放数量:">
+                <el-input-number v-model="giveCouponForm.num" :min="1" size="small"></el-input-number>
+                <div class="el-form-item__error">
+                    发放后会对所有的指定用户发放指定数量的优惠券
+                </div>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="onGiveCoupon = false">取消</el-button>
+            <el-button type="primary" @click="give">发放</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog :visible.sync="onChoseUser" width="60%" title="选择发放用户"  :class="{'edit-able': editState === 1}">
+        <el-form :inline="true" :model="userChoseForm" class="demo-form-inline" size="mini">
+            <el-form-item label="搜索条件：">
+                <el-input v-model="userChoseForm.like" placeholder="手机号/昵称"></el-input>
+            </el-form-item>
+            <el-form-item label="注册时间：">
+                <el-date-picker v-model="userChoseForm.date" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="timestamp" style="width: 220px"></el-date-picker>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="danger" @click="clearUserChoseForm()">清空</el-button>
+                <el-button type="primary" @click="getUserData()">查询</el-button>
+            </el-form-item>
+        </el-form>
+        <el-table :data="userTableData" style="width: 100%" v-loading="userDialogLoading">
+            <el-table-column prop="id" label="#" width="80"></el-table-column>
+            <el-table-column prop="user_nickname" label="昵称" min-width="120" show-overflow-tooltip=""></el-table-column>
+            <el-table-column prop="avatar" label="头像" min-width="50">
+                <template slot-scope="scope">
+                    <img :src="scope.row.avatar" style="width: 40px;height: 40px;">
+                </template>
+            </el-table-column>
+            <el-table-column prop="mobile" label="手机号" min-width="120"></el-table-column>
+            <el-table-column prop="create_time" label="注册时间" width="160">
+                <template slot-scope="scope">
+                    {{formatDateWithTime(scope.row.create_time)}}
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" fixed="right" width="60">
+                <template slot-scope="scope">
+                    <el-button size="mini" type="text" @click="choseUser(scope.row)">选择</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination background layout="total,prev, pager, next" :total="userTotalNum" :current-page.sync="userCurrentPage" @current-change="getUserData"></el-pagination>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    name: '',
+                    status: ''
+                },
+                editForm: {},
+                editState: 0,
+                dialogVisible: false,
+                dialogLoading: false,
+                durationOptions: {
+                    shortcuts: [{
+                        text: '一周',
+                        onClick(picker) {
+                            const end = new Date();
+                            let start = new Date();
+                            start = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+                            end.setTime(start.getTime() + 3600 * 1000 * 24 * 7);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '一个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            let start = new Date();
+                            start = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+                            end.setTime(start.getTime() + 3600 * 1000 * 24 * 30);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            let start = new Date();
+                            start = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+                            end.setTime(start.getTime() + 3600 * 1000 * 24 * 90);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
+
+                status: ['已过期', '可发放', '已发放'],
+                type: ['满N减N', 'N折券', '现金抵用券'],
+                rangeType: ['全场', '指定类别', '指定商品'],
+                termType: ['派发当日有效', '派发N日有效', '指定日期内有效'],
+                categoryList: JSON.parse('{$categoryList}'),
+
+                // 商品数据
+                goodsChoseForm: {
+                    category: [],
+                    price: ['',''],
+                    name: ''
+                },
+                categoryTree: JSON.parse('{$categoryTree}'),
+                onChoseGoods: false,
+                goodsTableData: [],
+                goodsTotalNum: 0,
+                goodsCurrentPage: 1,
+                goodsDialogLoading: false,
+
+                // 发放优惠券
+                onGiveCoupon: false,
+                giveCouponLoading: false,
+                giveCouponForm: {},
+
+                // 用户数据
+                onChoseUser: false,
+                userChoseForm: {
+                    like: '',
+                    date: []
+                },
+                userTableData: [],
+                userTotalNum: 0,
+                userCurrentPage: 1,
+                userDialogLoading: false,
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    name: '',
+                    status:''
+                };
+            },
+            toChoseGoods () {
+                this.onChoseGoods = true;
+                this.getGoodsData();
+            },
+            clearGoodsChoseForm () {
+                this.goodsChoseForm = {
+                    category: [],
+                    price: ['',''],
+                    name: ''
+                };
+            },
+            choseGoods (row) {
+                for (goods of this.editForm.goods_range) {
+                    if (goods.id === row.id) {
+                        this.$message.warning('已经选择过该商品');
+                        return;
+                    }
+                }
+                this.editForm.goods_range.push(JSON.parse(JSON.stringify(row)));
+                this.onChoseGoods = false;
+            },
+            getGoodsData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.goodsDialogLoading = true;
+                if (this.goodsChoseForm.category.length === 2){
+                    params.category = this.goodsChoseForm.category;
+                }
+                if (this.goodsChoseForm.price[0] !== '' || this.goodsChoseForm.price[1] !== ''){
+                    params.price = this.goodsChoseForm.price;
+                }
+                if (this.goodsChoseForm.name !== ''){
+                    params.name = this.goodsChoseForm.name;
+                }
+                axios.get('/admin/coupon/getGoods', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.goodsDialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.goodsTableData = response.data.data.data;
+                        _this.goodsTotalNum = response.data.data.total;
+                        _this.goodsCurrentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.goodsDialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.name !== ''){
+                    params.name = this.form.name;
+                }
+                if (this.form.status !== ''){
+                    params.status = this.form.status;
+                }
+                axios.get('/admin/coupon/index', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            edit (row, editState) {
+                if (row) {
+                    let data = JSON.parse(JSON.stringify(row));
+                    this.editForm = {
+                        id : data.id,
+                        name: data.name,
+                        type: data.type,
+                        range_type: data.range_type,
+                        term_type: data.term_type,
+                        threshold: 0,
+                        reduction_strength: 0,
+                        discount_strength: 0,
+                        cash_strength: 0,
+                        days: 0,
+                        duration: [],
+                        category_range: [],
+                        goods_range: [],
+                        total: data.total
+                    };
+                    // 优惠券类型
+                    switch (data.type) {
+                        case 0:
+                            this.editForm.threshold = data.threshold;
+                            this.editForm.reduction_strength = data.strength;
+                            break;
+                        case 1:
+                            this.editForm.discount_strength = data.strength;
+                            break;
+                        case 2:
+                            break;
+                        case 3:
+                            this.editForm.cash_strength = data.strength;
+                            break;
+                    }
+                    // 优惠券范围
+                    switch (data.range_type) {
+                        case 0:
+                            break;
+                        case 1:
+                            this.editForm.category_range = data.range;
+                            break;
+                        case 2:
+                            this.editForm.goods_range = data.range;
+                            break;
+                    }
+                    // 有效期类型
+                    switch (data.term_type) {
+                        case 0:
+                            break;
+                        case 1:
+                            this.editForm.days = data.end_time;
+                            break;
+                        case 2:
+                            this.editForm.duration = [
+                                data.start_time * 1000,
+                                data.end_time * 1000,
+                            ];
+                            break;
+                    }
+                } else {
+                    this.editForm = {
+                        id : '',
+                        name: '',
+                        type: null,
+                        range_type: null,
+                        term_type: null,
+                        threshold: 0,
+                        reduction_strength: 0,
+                        discount_strength: 0,
+                        cash_strength: 0,
+                        days: 0,
+                        duration: [],
+                        category_range: [],
+                        goods_range: [],
+                        total: 0
+                    }
+                }
+                this.editState = editState;
+                this.dialogVisible = true;
+            },
+            submit () {
+                let _this = this;
+                let params = {};
+                if (this.editForm.id !== '') {
+                    params = {
+                        id: this.editForm.id,
+                        total: this.editForm.total
+                    };
+                } else {
+                    params = {
+                        name: this.editForm.name,
+                        type: this.editForm.type,
+                        range_type: this.editForm.range_type,
+                        term_type: this.editForm.term_type,
+                        total: this.editForm.total
+                    };
+                }
+                // 优惠券类型
+                switch (this.editForm.type) {
+                    case 0:
+                        params.threshold = this.editForm.threshold;
+                        params.reduction_strength = this.editForm.reduction_strength;
+                        break;
+                    case 1:
+                        params.discount_strength = this.editForm.discount_strength;
+                        break;
+                    case 2:
+                        params.cash_strength = this.editForm.cash_strength;
+                        break;
+                    default:
+                        this.$message.warning('请选择优惠券类型');
+                        return;
+                }
+                // 优惠券范围
+                switch (this.editForm.range_type) {
+                    case 0:
+                        break;
+                    case 1:
+                        params.category_range = this.editForm.category_range;
+                        break;
+                    case 2:
+                        params.goods_range = [];
+                        for (goods of this.editForm.goods_range) {
+                            params.goods_range.push(goods.id)
+                        }
+                        break;
+                    default:
+                        this.$message.warning('请选择范围类型');
+                        return;
+                }
+                // 有效期类型
+                switch (this.editForm.term_type) {
+                    case 0:
+                        break;
+                    case 1:
+                        params.days = this.editForm.days;
+                        break;
+                    case 2:
+                        params.duration = [];
+                        if (this.editForm.duration.length === 2) {
+                            params.duration = [
+                                parseInt(this.editForm.duration[0] / 1000),
+                                parseInt(this.editForm.duration[1] / 1000)
+                            ];
+                        }
+                        break;
+                    default:
+                        this.$message.warning('请选择有效期类型');
+                        return;
+                }
+                this.dialogLoading = true;
+                axios.post('/admin/coupon/submit', params, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        if (_this.editForm.id === '') {
+                            _this.$message.success('新增完成');
+                        } else {
+                            _this.$message.success('修改成功');
+                        }
+                        _this.dialogVisible = false;
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            del (id) {
+                let _this = this;
+                this.$confirm('此操作将永久删除该优惠券，是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _this.onDataLoading = true;
+                    axios.post('/admin/coupon/del', {
+                        id: id
+                    }, {
+                        headers: _this.headers
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            _this.$message.success('删除成功');
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message.info('取消删除');
+                });
+            },
+            toGiveCoupon (row) {
+                let data = JSON.parse(JSON.stringify(row));
+                this.giveCouponForm = {
+                    id: data.id,
+                    active_time: null,
+                    range_type: 0,
+                    users: [],
+                    num: 1
+                };
+                this.onGiveCoupon = true;
+            },
+            toChoseUser () {
+                this.onChoseUser = true;
+                this.getUserData();
+            },
+            clearUserChoseForm () {
+                this.userChoseForm = {
+                    like: '',
+                    date: []
+                };
+            },
+            choseUser (row) {
+                for (user of this.giveCouponForm.users) {
+                    if (user.id === row.id) {
+                        this.$message.warning('已经选择过该用户');
+                        return;
+                    }
+                }
+                this.giveCouponForm.users.push(JSON.parse(JSON.stringify(row)));
+                this.onChoseUser = false;
+            },
+            getUserData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.userDialogLoading = true;
+                if (this.userChoseForm.like !== ''){
+                    params.like = this.userChoseForm.like;
+                }
+                if (this.userChoseForm.date.length  === 2){
+                    params.date = this.userChoseForm.date;
+                }
+                axios.get('/admin/coupon/getUsers', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.userDialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.userTableData = response.data.data.data;
+                        _this.userTotalNum = response.data.data.total;
+                        _this.userCurrentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.userDialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            give () {
+                let _this = this;
+                let params = {};
+                params = {
+                    id: this.giveCouponForm.id,
+                    range_type: this.giveCouponForm.range_type,
+                    active_time: this.giveCouponForm.active_time / 1000,
+                    num: this.giveCouponForm.num
+                };
+                if (params.range_type === 0) {
+                    params.users = [];
+                    for (let user of this.giveCouponForm.users) {
+                        params.users.push(user.id);
+                    }
+                }
+                this.giveCouponLoading = true;
+                axios.post('/admin/coupon/give', params, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.giveCouponLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('发放完成');
+                        _this.onGiveCoupon = false;
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.giveCouponLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+            },
+            formatDateWithTime (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return `${date.getFullYear()}-${this.prefix(date.getMonth() + 1)}-${this.prefix(date.getDate())} ${this.prefix(date.getHours())}:${this.prefix(date.getMinutes())}:${this.prefix(date.getSeconds())}`;
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

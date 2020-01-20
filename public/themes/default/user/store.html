@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>微心愿</title>
+    <link rel="stylesheet" href="src/style.css">
+    <link rel="stylesheet" href="src/iconfont.css">
+</head>
+<style>
+
+    .bot {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background: #fff;
+        box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.1);
+    }
+    input{
+        background: #fff;
+        border: none;
+        line-height: 1;
+    }
+    .storePic img{
+        width: 5rem;
+        height: 5rem;
+        border-radius: 0.8rem;
+    }
+</style>
+
+<body>
+    <div class="top flex text-c" id="headerTop">
+        <i class="iconfont icon-left" ></i>
+        <p class="flex_f1">店铺信息</p>
+        <span  ></span>
+    </div>
+
+    <div class="m25 p_l_r25 bc_fff">
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+            <span class="c_666 ">店铺名称</span>
+            <span class="c_666" > ：</span>
+            <p class="">圆融绿茶餐厅</p>
+        </div>
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+            <span class="c_666 ">店铺地址</span>
+            <span class="c_666"> ：</span>
+            <p class="">圆融绿茶餐厅</p>
+        </div>
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+            <span class="c_666 ">联系电话</span>
+            <span class="c_666"> ：</span>
+            <input type="text" value="135555542" style="width:7rem">
+            <span class="btnmini ml20">修改</span>
+            <p class="flex_f1"></p>
+        </div>
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+            <span class="c_666 ">店铺头像</span>
+            <span class="c_666"> ：</span>
+            <p class="storePic">
+                <img src="src/1.png" class="mr20" >
+            </p>
+            <span class="btnmini ml20">修改</span>
+        </div>
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+            <span class="c_666 ">营业时间</span>
+            <span class="c_666"> ：</span>
+            <input type="text" value="10:00 - 12:00" style="width:7rem">
+            <span class="btnmini ml20">修改</span>
+            <p class="flex_f1"></p>
+        </div>
+    </div>
+
+
+</body>
+
+</html>

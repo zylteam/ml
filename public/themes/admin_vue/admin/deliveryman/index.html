@@ -1,0 +1,224 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="配送员管理" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="搜索:">
+                            <el-input v-model="form.like" placeholder="账号/姓名" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="门店:">
+                            <el-select v-model="form.store_id" placeholder="请选择">
+                                <el-option v-for="item in shopList" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null)" icon="el-icon-plus">新增配送员</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="60"></el-table-column>
+                <el-table-column prop="account" label="配送员账号" min-width="160"></el-table-column>
+                <el-table-column prop="password" label="密码" min-width="120"></el-table-column>
+                <el-table-column prop="name" label="配送员姓名" min-width="160"></el-table-column>
+                <el-table-column prop="store_id" label="门店" min-width="160">
+                    <template slot-scope="scope">
+                        <template v-for="item in shopList" v-if="item.id === scope.row.store_id">{{item.name}}</template>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="160">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="edit(scope.row)">编辑</el-button>
+                        <el-button size="mini" type="text" @click="del(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="dialogVisible" width="60%" title="配送员" v-loading="dialogLoading">
+        <el-form :model="editForm" label-width="100px">
+            <el-form-item label="账号:">
+                <el-input v-model="editForm.account" placeholder="请输入4~16位数字字母下划线及破折号组成的账号" :disabled="editForm.id !== ''"></el-input>
+            </el-form-item>
+            <el-form-item label="密码:">
+                <el-input v-model="editForm.password" placeholder="请输入6~16位数字字母下划线及破折号组成的密码"></el-input>
+            </el-form-item>
+            <el-form-item label="姓名:">
+                <el-input v-model="editForm.name" placeholder="请输入配送员姓名"></el-input>
+            </el-form-item>
+            <el-form-item label="门店:">
+                <el-select v-model="editForm.store_id" placeholder="请选择所属门店">
+                    <el-option v-for="item in shopList" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submit">确定</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                shopList: JSON.parse('{$shop}'),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    like: '',
+                    store_id: null
+                },
+
+                editForm: {},
+                dialogVisible: false,
+                dialogLoading: false
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    like: '',
+                    store_id: null
+                };
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.like !== ''){
+                    params.like = this.form.like;
+                }
+                if (this.form.store_id){
+                    params.store_id = this.form.store_id;
+                }
+                axios.get('/admin/deliveryman/index', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            edit (row) {
+                if (row) {
+                    this.editForm = JSON.parse(JSON.stringify(row));
+                } else {
+                    this.editForm = {
+                        id: '',
+                        account: '',
+                        password: '',
+                        name: '',
+                        store_id: ''
+                    };
+                }
+                this.dialogVisible = true;
+            },
+            submit () {
+                let _this = this;
+                let params = {
+                    account: this.editForm.account,
+                    password: this.editForm.password,
+                    name: this.editForm.name,
+                    store_id: this.editForm.store_id
+                };
+                if (this.editForm.id !== '') {
+                    params.id = this.editForm.id
+                }
+                this.dialogLoading = true;
+                axios.post('/admin/deliveryman/submit', params, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        if (_this.editForm.id === '') {
+                            _this.$message.success('新增完成');
+                        } else {
+                            _this.$message.success('修改成功');
+                        }
+                        _this.dialogVisible = false;
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            del (id) {
+                let _this = this;
+                this.$confirm('此操作将永久删除该配送员，是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    let params = {
+                        id: id
+                    };
+                    this.onDataLoading = true;
+                    axios.post('/admin/deliveryman/del', params, {
+                        headers: _this.headers
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            _this.$message.success('删除成功');
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message.info('取消删除');
+                });
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

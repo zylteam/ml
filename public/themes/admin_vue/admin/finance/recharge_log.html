@@ -1,0 +1,162 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="充值列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="24">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="用户ID:">
+                            <el-input v-model="form.uid" placeholder="用户ID" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="日期:">
+                            <el-date-picker v-model="form.duration" type="daterange" value-format="timestamp" :picker-options="durationOptions" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" clearable></el-date-picker>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="60"></el-table-column>
+                <el-table-column prop="uid" label="客户ID" min-width="100"></el-table-column>
+                <el-table-column prop="付款方式" label="充值方式" min-width="100">
+                    <template slot-scope="scope">
+                        {{payWay[scope.row.pay_way]}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="value" label="充值金额" min-width="100"></el-table-column>
+                <el-table-column prop="end_time" label="充值时间" width="160">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.pay_time)}}
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    uid: '',
+                    duration: null
+                },
+
+                durationOptions: {
+                    shortcuts: [{
+                        text: '一周',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 7);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '一个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 30);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 90);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
+                payWay: {
+                    Card: '充值卡',
+                    WeChat: '微信支付',
+                    Alipay: '支付宝支付',
+                    Admin: '后台充值'
+                }
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    uid: '',
+                    duration: null
+                };
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.uid !== ''){
+                    params.uid = this.form.uid;
+                }
+                if (this.form.duration){
+                    params.duration = [
+                        this.form.duration[0] / 1000,
+                        this.form.duration[1] / 1000
+                    ]
+                }
+                axios.get('/admin/finance/rechargeLog', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            edit (row) {
+                this.editForm = {
+                    type: 0,
+                    value: 100,
+                    end_time: null,
+                    num: 1
+                };
+                this.dialogVisible = true;
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

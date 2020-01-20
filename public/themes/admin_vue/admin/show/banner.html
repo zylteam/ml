@@ -1,0 +1,406 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+.avatar-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.avatar-uploader .el-upload:hover {
+    border-color: #409EFF;
+}
+.avatar-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+    width: 150px;
+    height: 80px;
+    line-height: 80px;
+    text-align: center;
+}
+.avatar {
+    width: 150px;
+    height: 80px;
+    display: block;
+}
+.banner-img {
+    width: 100%;
+    border-radius: 4px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="首页轮播" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="广告名称:">
+                            <el-input v-model="form.name" placeholder="广告名称" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="状态:">
+                            <el-select v-model="form.status" placeholder="请选择">
+                                <el-option label="已下线" :value="0"></el-option>
+                                <el-option label="已上线" :value="1"></el-option>
+                                <el-option label="等待中" :value="2"></el-option>
+                                <el-option label="已过期" :value="3"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null, 1)" icon="el-icon-plus">新增广告</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="50"></el-table-column>
+                <el-table-column prop="name" label="广告名称" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="img_url" label="广告图" width="100">
+                    <template slot-scope="scope">
+                        <img class="banner-img" :src="scope.row.url">
+                    </template>
+                </el-table-column>
+                <el-table-column prop="img_url" label="持续时间" width="140">
+                    <template slot-scope="scope">
+                        <template v-if="!scope.row.duration[0]">永久</template>
+                        <template v-else>
+                            {{formatDate(scope.row.duration[0])}}<br>
+                            {{formatDate(scope.row.duration[1])}}
+                        </template>
+                    </template>
+                </el-table-column>
+                <el-table-column label="状态" width="70">
+                    <template slot-scope="scope">
+                        <template v-if="scope.row.online === 1">
+                            {{getOnlineStatus(scope.row.duration)}}
+                        </template>
+                        <template v-else-if="scope.row.online === 0">下线</template>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="order" label="权重" width="80"></el-table-column>
+                <el-table-column prop="online" label="上线/下线" width="100">
+                    <template slot-scope="scope">
+                        <el-switch v-model="scope.row.online" :active-value="1" :inactive-value="0" active-text="开" inactive-text="关" @change="(value) => {handleOnlineStatus(scope.row, value)}"></el-switch>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="130">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="edit(scope.row, 0)">查看</el-button>
+                        <el-button size="mini" type="text" @click="edit(scope.row, 1)">编辑</el-button>
+                        <el-button size="mini" type="text" @click="del(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading" title="首页Banner"  :class="{'edit-able': editState === 1}">
+        <el-form :model="editForm" label-width="100px" :disabled="editState === 0 ? true : false">
+            <el-form-item label="banner名称:">
+                <el-input v-model="editForm.name" placeholder="banner名称"></el-input>
+            </el-form-item>
+            <el-form-item label="banner图片:">
+                <el-upload class="avatar-uploader" action="/admin/show/bannerImgUploader" :headers="headers" :show-file-list="false" :on-success="handleBannerImgSuccess">
+                    <img v-if="editForm.url" :src="editForm.url" class="avatar">
+                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                </el-upload>
+                <div class="el-form-item__error">
+                    图片宽高比例必须为 15:8，建议分辨率 375*200px 以上
+                </div>
+            </el-form-item>
+            <el-form-item label="权重:">
+                <el-input-number v-model="editForm.order" placeholder="权重" :min="0"></el-input-number>
+            </el-form-item>
+            <el-form-item label="持续时间:">
+                <el-date-picker v-model="editForm.duration" type="datetimerange" value-format="timestamp" :picker-options="durationOptions" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" clearable></el-date-picker>
+            </el-form-item>
+            <el-form-item label="跳转类型:">
+                <el-radio-group v-model="editForm.jump_type">
+                    <el-radio :label="0">H5链接地址</el-radio>
+                    <el-radio :label="1">APP内部页面</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item v-if="editForm.jump_type === 0" label="跳转链接:">
+                <el-input v-model="editForm.target_url" placeholder="跳转链接"></el-input>
+            </el-form-item>
+            <el-form-item v-else label="页面选择:">
+                <el-select v-model="editForm.target_page_type" placeholder="请选择">
+                    <el-option label="老用户分享" value="share"></el-option>
+                    <el-option label="分类详情" value="category"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item v-if="editForm.jump_type === 1 && editForm.target_page_type === 'category'" label="分类ID:">
+                <el-input v-model="editForm.target_id" placeholder="分类ID"></el-input>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">退出</el-button>
+            <el-button v-if="editState === 1" type="primary" @click="submit">保存</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    name: '',
+                    status: ''
+                },
+                editForm: {},
+                editState: 0,
+                dialogVisible: false,
+                dialogLoading: false,
+                durationOptions: {
+                    shortcuts: [{
+                        text: '一周',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 7);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '一个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 30);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 90);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                }
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    name: '',
+                    status:''
+                };
+            },
+            getOnlineStatus (duration) {
+                if (!duration[0]) {
+                    return '已上线';
+                }
+                let now = Date.parse(new Date()) / 1000;
+                if (duration[0] > now) {
+                    return '等待中';
+                }
+                if (duration[1] > now) {
+                    return '已上线';
+                }
+                return '已过期';
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.name !== ''){
+                    params.name = this.form.name;
+                }
+                if (this.form.status !== ''){
+                    params.status = this.form.status;
+                }
+                axios.get('/admin/show/banner', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            edit (row, editState) {
+                if (row) {
+                    this.editForm = JSON.parse(JSON.stringify(row));
+                    if (this.editForm.duration[0]) {
+                        this.editForm.duration[0] = this.editForm.duration[0] * 1000;
+                        this.editForm.duration[1] = this.editForm.duration[1] * 1000;
+                    } else {
+                        this.editForm.duration = null;
+                    }
+                } else {
+                    this.editForm = {
+                        id : '',
+                        name: '',
+                        url: '',
+                        jump_type: 0,
+                        order: 0
+                    }
+                }
+                this.editState = editState;
+                this.dialogVisible = true;
+            },
+            submit () {
+                let _this = this;
+                let params = {
+                    name: this.editForm.name,
+                    url: this.editForm.url,
+                    order: this.editForm.order,
+                    jump_type: this.editForm.jump_type
+                };
+                if (this.editForm.id !== '') {
+                    params.id = this.editForm.id
+                }
+                if (this.editForm.duration) {
+                    params.duration = [
+                        parseInt(this.editForm.duration[0] / 1000),
+                        parseInt(this.editForm.duration[1] / 1000)
+                    ];
+                }
+                if (this.editForm.jump_type === 0) {
+                    params.target_url = this.editForm.target_url
+                } else {
+                    params.target_page_type = this.editForm.target_page_type;
+                    if (this.editForm.target_page_type === 'category') {
+                        params.target_id = this.editForm.target_id;
+                    }
+                }
+                this.dialogLoading = true;
+                axios.post('/admin/show/bannerSubmit', params, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        if (_this.editForm.id === '') {
+                            _this.$message.success('新增完成');
+                        } else {
+                            _this.$message.success('修改成功');
+                        }
+                        _this.dialogVisible = false;
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            handleOnlineStatus (row, value) {
+                let _this = this;
+                let msg = '此操作将上线此Banner，是否继续?';
+                if (value === 0) {
+                    msg = '此操作将下线此Banner，是否继续?';
+                }
+                this.$confirm(msg, '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _this.onDataLoading = true;
+                    axios.post('/admin/show/setBannerOnlineStatus', {
+                        id: row.id,
+                        online: value
+                    }, {
+                        headers: _this.headers
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            if (value === 1) {
+                                _this.$message.success('成功上线');
+                            } else {
+                                _this.$message.success('成功下线');
+                            }
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    row.online = value === 0 ? 1 : 0;
+                    this.$message.info('取消操作');
+                });
+            },
+            del (id) {
+                let _this = this;
+                this.$confirm('此操作将永久删除该Banner，是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _this.onDataLoading = true;
+                    axios.post('/admin/show/delBanner', {
+                        id: id
+                    }, {
+                        headers: _this.headers
+                    }).then(function (response) {
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            _this.$message.success('删除成功');
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message.info('取消删除');
+                });
+            },
+            handleBannerImgSuccess(res, file) {
+                if (res.code === 1) {
+                    this.editForm.url = res.data.url;
+                } else {
+                    this.$message.error(res.msg)
+                }
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes());
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

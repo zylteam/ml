@@ -1,0 +1,330 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<script src="https://unpkg.com/vue-chartjs/dist/vue-chartjs.min.js"></script>
+<include file="public@header_vue"/>
+</head>
+<body>
+
+<div id="app">
+    <template>
+        <el-tabs v-model="activeName" type="border-card" @tab-click="handleClick">
+            <el-tab-pane label="订单数量统计" name="first">
+
+                <el-form :inline="true" :model="form" class="demo-form-inline" label-width="90px" size="mini" v-loading="onDataLoading">
+
+                    <el-form-item label="时间：">
+                        <el-date-picker v-model="form.date" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="timestamp" style="width: 220px"></el-date-picker>
+                    </el-form-item>
+
+                    <el-form-item label="归属区域">
+                        <el-col :span="10">
+                            <el-cascader expand-trigger="hover" :options="categoryTree" v-model="selectedOptions"></el-cascader>
+                        </el-col>
+                    </el-form-item>
+
+                    <el-form-item>
+                        <el-button type="danger" @click="clearForm()">清空</el-button>
+                        <el-button type="primary" @click="fetchData()">查询</el-button>
+                    </el-form-item>
+
+                </el-form>
+
+                <template>
+                    <div>
+                        <div id="line-echar" style="height:600px;">
+                        </div>
+                    </div>
+                </template>
+
+
+                <template>
+                    <div>
+                        <div id="line-echar-two" style="height:600px;margin-top: 100px;margin-bottom: 50px;">
+                        </div>
+                    </div>
+                </template>
+
+
+                <el-pagination background layout="prev, pager, next" :page-size="15" :total="totalNum" :current-page.sync="currentPage" @current-change="fetchData"></el-pagination>
+
+
+            </el-tab-pane>
+            <!--<el-tab-pane label="销售额统计" name="second" v-loading="onDataTwoLoading">销售额统计</el-tab-pane>-->
+        </el-tabs>
+    </template>
+</div>
+
+</body>
+<style>
+    .small {
+        width: 1200px;
+        /*height: 1000px;*/
+    }
+</style>
+<script type="text/javascript" src="/echarts/echarts.js"></script>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                activeName: 'first',
+                form:{
+                    date:'',
+                },
+                onDataLoading:false,
+                onDataTwoLoading:false,
+                labels:[],
+                number:[],
+
+                housingestate:[],
+
+                totalNum: 0,
+                currentPage: 1,
+
+                categoryTree:[],
+                selectedOptions:[],
+                total:[],
+
+            }
+        },
+        mounted () {
+
+        },
+        created () {
+            this.fetchData();
+        },
+        methods:{
+            clearForm () {
+                console.log(this.form);
+                this.form = {
+                    date:''
+                };
+                this.selectedOptions = [];
+            },
+            handleClick(tab, event) {
+                let scene = event.target.getAttribute('id');//获取到当前元素的id
+                console.log(scene);
+                if (scene == 'tab-first') {
+                    this.orderCount();
+                }
+                if (scene == 'tab-second') {
+                    this.orderSale();
+                }
+            },
+            //本年度订单数量统计
+            orderCount () {
+                var myChart = echarts.init(document.getElementById('line-echar'));
+
+                option = {
+                    title: {
+                        text: '订单数量统计',
+                    },
+                    grid:{
+                        left:'5%',
+                        x:35,
+                        // y:45,
+                        // x2:5,
+                        // y2:20,
+                        borderWidth:1
+                    },
+                    //提示框，鼠标悬浮交互时的信息提示
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    //图例
+                    legend: {
+                        data:['数量统计']
+                    },
+
+                    //定义工具按钮
+                    toolbox: {
+                        padding:30,
+                        show: true,
+                        feature: {
+                            dataZoom: {
+                                yAxisIndex: 'none'
+                            },
+                            dataView: {readOnly: false},//数据信息按钮
+                            magicType: {type: ['bar','line']},//显示折线、柱状图等切换按钮
+                            restore: {},
+                            saveAsImage: {}
+                        }
+                    },
+
+                    xAxis:  {
+                        type: 'category',
+                        boundaryGap: true,//设为false柱状图的第一列会压住纵坐标
+                        data: this.housingestate,
+                        "axisLabel":{
+                            interval: 0,
+                            rotate:"25"
+                        }
+                    },
+
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: {
+                            formatter: '{value}'
+                        }
+                    },
+                    series: [
+                        {
+                            name:'数量统计',
+                            type:'bar',
+                            data:this.number,
+                            markPoint: {
+                                data: [
+                                    {type: 'max', name: '最大值'},
+                                    {type: 'min', name: '最小值'}
+                                ]
+                            }
+
+                        },
+
+
+                    ],
+
+                };
+
+                myChart.setOption(option);
+            },
+
+            //本年度订单金额统计
+            orderPrice () {
+                var myChart = echarts.init(document.getElementById('line-echar-two'));
+
+                option = {
+                    title: {
+                        text: '订单金额统计',
+                    },
+                    grid:{
+                        left:'5%',
+                        x:35,
+                        // y:45,
+                        // x2:5,
+                        // y2:20,
+                        borderWidth:1
+                    },
+                    //提示框，鼠标悬浮交互时的信息提示
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    //图例
+                    legend: {
+                        data:['金额统计']
+                    },
+
+                    //定义工具按钮
+                    toolbox: {
+                        padding:30,
+                        show: true,
+                        feature: {
+                            dataZoom: {
+                                yAxisIndex: 'none'
+                            },
+                            dataView: {readOnly: false},//数据信息按钮
+                            magicType: {type: ['bar','line']},//显示折线、柱状图等切换按钮
+                            restore: {},
+                            saveAsImage: {}
+                        }
+                    },
+
+                    xAxis:  {
+                        type: 'category',
+                        boundaryGap: true,//设为false柱状图的第一列会压住纵坐标
+                        data: this.housingestate,
+                        "axisLabel":{
+                            interval: 0,
+                            rotate:"25"
+                        }
+                    },
+
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: {
+                            formatter: '{value}'
+                        }
+                    },
+                    series: [
+                        {
+                            name:'金额统计',
+                            type:'bar',
+                            data:this.total,
+                            markPoint: {
+                                data: [
+                                    {type: 'max', name: '最大值'},
+                                    {type: 'min', name: '最小值'}
+                                ]
+                            }
+
+                        },
+
+
+                    ],
+
+                };
+
+                myChart.setOption(option);
+            },
+
+
+            fetchData  (page = 1) {
+
+                let _this = this;
+
+                let date = '';
+
+                if(_this.form.date != ''){
+                    date = this.form.date;
+                }
+
+                let selectedOptions = this.selectedOptions;
+
+
+                this.onDataLoading = true;
+
+                axios.post('/admin/Statistical/orderCount', { page:page ,date:date ,option:selectedOptions }, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+
+                    _this.onDataLoading = false;
+
+                    if (response.data.code === 1) {
+
+                        _this.number = response.data.data.value;
+
+                        //console.log(response.data.data.value);
+
+                        _this.total = response.data.data.total;
+
+                        _this.categoryTree  = response.data.data.department_tree;
+                        // console.log(response.data.data.department_tree);
+                        // console.log(response.data.data.housingestate);
+                        _this.housingestate = response.data.data.housingestate;
+
+                        _this.totalNum = response.data.data.count;
+
+                        _this.orderCount();
+                        _this.orderPrice();
+
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+
+            orderSale () {
+
+            },
+        }
+    });
+</script>
+
+</html>

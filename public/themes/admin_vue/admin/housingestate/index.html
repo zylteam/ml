@@ -1,0 +1,623 @@
+<include file="public@header_vue"/>
+<!--地图组件-->
+<script src="//unpkg.com/vue-amap@0.5.8/dist/index.js"></script>
+
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="小区列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="selectform" class="demo-form-inline" size="mini">
+                        <el-form-item label="小区名称：">
+                            <el-input v-model="selectform.name" placeholder="小区名称"></el-input>
+                        </el-form-item>
+                        <el-form-item label="所属门店：">
+                            <el-col :span="20">
+                                <el-select v-model="selectform.store_id" placeholder="请选择">
+                                    <el-option v-for="item in stores" :key="item.value" :label="item.label" :value="item.value"></el-option>
+                                </el-select>
+                            </el-col>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null)">新增</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="ID" width="50"></el-table-column>
+                <el-table-column prop="name" label="小区名称" width="200"></el-table-column>
+                <el-table-column prop="store_name" label="所属门店" width="250">
+                    <template slot-scope="scope">
+                        <el-tag type="success">{{scope.row.store_name}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="map_id" label="高德地图ID" width="150"></el-table-column>
+                <el-table-column prop="area_cn" label="区域" width="150"></el-table-column>
+                <el-table-column prop="address" label="小区地址" min-width="200" show-overflow-tooltip></el-table-column>
+
+                <el-table-column prop="status" label="送货上门">
+                    <template slot-scope="scope">
+                        <el-switch  v-model="scope.row.delivery_home" :active-value="1" :inactive-value="0" @change="(value) => {handleStatus(scope.row, value)}"></el-switch>
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="status" label="启用状态">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.status === 0">关闭</span>
+                        <span v-if="scope.row.status === 1">正常</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="100">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="showChest(scope.row)">智能柜</el-button>
+                        <el-button size="mini" type="text" @click="edit(scope.row)">编辑</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="total,prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <!--门店新增、编辑-->
+    <el-dialog title="新增小区" :visible.sync="dialogStoreVisible" v-loading.fullscreen="dialogLoading">
+        <el-form :model="form" class="demo-form-inline" :rules="rules" ref="form" label-width="90px">
+            <el-form-item label="归属区域" prop="companyname">
+                <el-col :span="10">
+                    <el-cascader  expand-trigger="hover" :options="categoryTree" v-model="form.category_id" > </el-cascader>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="小区地址" prop="address">
+                <el-col :span="20">
+                    <el-input placeholder="请在地图中获取地址坐标" v-model="form.address" disabled="disabled">
+                        <template slot="append"><span @click="dialogmapVisible = true">打开地图</span></template>
+                    </el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="小区名称" prop="name">
+                <el-col :span="20">
+                    <el-input v-model="form.name" placeholder="小区名称"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="所属门店" prop="store_id">
+                <el-col :span="20">
+                    <el-select v-model="form.store_id" placeholder="请选择">
+                        <el-option v-for="item in stores" :key="item.value" :label="item.label" :value="item.value"></el-option>
+                    </el-select>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="状态">
+                <el-switch v-model="form.status" active-text="正常" inactive-text="关闭" :active-value="1" :inactive-value="0"></el-switch>
+            </el-form-item>
+            <el-form-item label="菜速达">
+                <el-switch v-model="form.instant_delivery" active-text="支持" inactive-text="不支持" :active-value="1" :inactive-value="0"></el-switch>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submit('form')">新增</el-button>
+        </span>
+    </el-dialog>
+    <!--地图面板-->
+    <el-dialog title="地图" :visible.sync="dialogmapVisible" v-loading.fullscreen="dialogLoading">
+        <div class="amap-page-container">
+            <el-amap-search-box class="search-box" :search-option="searchOption" :on-search-result="onSearchResult"></el-amap-search-box>
+            <el-amap vid="amapDemo" :center="mapCenter" :zoom="18" class="amap-demo" :events="events">
+                <el-amap-marker :position="marker"></el-amap-marker>
+            </el-amap>
+            <div class="toolbar">
+                经纬度: [{{ form.map_x }}, {{ form.map_y }}] 地址: {{ form.address}}
+            </div>
+        </div>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="dialogmapVisible = false">确定</el-button>
+        </span>
+    </el-dialog>
+    <!--柜子-->
+    <el-dialog title="智能柜" :visible.sync="chestDialogVisible" v-loading="chestDialogLoading">
+        <el-row>
+            <el-col :span="24">
+                <el-form :model="areaData" size="mini">
+                    <el-form-item label="小区名称：">
+                        {{areaData.name}}
+                    </el-form-item>
+                    <el-form-item label="所属门店：">
+                        {{areaData.store_name}}
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+        <el-row style="margin-bottom: 10px;">
+            <el-col :span="24" style="text-align: right">
+                <el-button type="primary" size="mini" @click="editChest(null)">新增</el-button>
+                <el-button type="primary" size="mini" @click="getChestData(areaData.id)">刷新</el-button>
+            </el-col>
+        </el-row>
+        <el-table :data="chestData" style="width: 100%">
+            <el-table-column prop="num" label="编号" min-width="200"></el-table-column>
+            <el-table-column prop="name" label="名称" min-width="200"></el-table-column>
+            <el-table-column prop="status" label="启用状态" min-width="100">
+                <template slot-scope="scope">
+                    <el-switch v-model="scope.row.status" :active-value="1" :inactive-value="0" active-text="开" inactive-text="关" @change="(value) => {handleChestStatus(scope.row, value)}"></el-switch>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" fixed="right" width="100">
+                <template slot-scope="scope">
+                    <el-button size="mini" type="text" @click="editChest(scope.row)">编辑</el-button>
+                    <el-button size="mini" type="text" @click="chestDestroy(scope.row.id)">删除</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-dialog>
+    <!--智能柜新增、编辑-->
+    <el-dialog title="智能柜" :visible.sync="chestEditDialogVisible" v-loading.fullscreen="chestEditDialogLoading">
+        <el-form :model="chestEditForm" label-width="90px">
+            <el-form-item label="编号:" prop="name">
+                <el-input v-model="chestEditForm.num" placeholder="编号"></el-input>
+            </el-form-item>
+            <el-form-item label="名称:" prop="name">
+                <el-input v-model="chestEditForm.name" placeholder="名称"></el-input>
+            </el-form-item>
+            <el-form-item label="所属小区:" prop="name">
+                {{areaData.name}}
+            </el-form-item>
+            <el-form-item label="状态:">
+                <el-switch v-model="chestEditForm.status" :active-value="1" :inactive-value="0" active-text="开" inactive-text="关"></el-switch>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="chestSubmit()" size="mini">保存</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+
+<style>
+    /*.el-container { margin-bottom: 20px; margin-top: 20px; }*/
+    .amap-demo { height: 350px; }
+    .search-box {  position: absolute; top: 25px; left: 20px;}
+    .amap-page-container { position: relative; }
+</style>
+
+<script>
+<!--高德地图配置-->
+window.VueAMap.initAMapApiLoader({
+    key: '2df523c4daaf54c8fa91fc28f6e6d87e',
+    plugin: ['Autocomplete', 'PlaceSearch', 'Scale', 'OverView', 'ToolBar', 'MapType', 'PolyEditor', 'AMap.CircleEditor', 'Geolocation', 'Geocoder'],
+    // 默认高德 sdk 版本为 1.4.4
+    v: '1.4.4'
+});
+var app = new Vue({
+    el: '#app',
+    data: function () {
+        let self = this;
+        return {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            tableData: [],
+            categoryTree:[],
+            stores: [],
+            selectform: {
+                name: "",
+                store_id: '',
+            },
+            form: {},
+            onDataLoading: false,
+            dialogLoading: false,
+            dialogStoreVisible: false,
+            dialogmapVisible: false,
+            totalNum: 0,
+            currentPage: 1,
+            rules: {
+                name: [{required: true, message: '请输入门店名称', trigger: 'change'}],
+                store_id: [{required: true, message: '请选择所属门店', trigger: 'change'}],
+                address: [{required: true, message: '请选择地址', trigger: 'change'}],
+            },
+
+            marker: [120.904166, 32.021917],
+            searchOption: {
+                city: '南通',
+                citylimit: true
+            },
+            mapCenter: [120.904166, 32.021917],
+
+            events: {
+                //通过热点获得（为了更精确地址定位）
+                'hotspotclick': (e) => {
+                    console.log(e);
+                    let {lng, lat} = e.lnglat;
+                    self.form.map_x = lng;
+                    self.form.map_y = lat;
+                    self.marker = [lng, lat];
+                    let placeSearch = new AMap.PlaceSearch();
+                    placeSearch.getDetails(e.id, function (status, result) {
+                        // self.onloadAddress = false;
+                        self.dialogmapVisible = false;
+                        // self.onMap = false;
+                        if (status === 'complete' && result.info === 'OK') {
+                            console.log(result);
+                            self.form.map_id = result.poiList.pois[0].id;
+                            self.form.map_name = result.poiList.pois[0].name;
+                            self.form.name = result.poiList.pois[0].name;
+                            self.form.address = result.poiList.pois[0].address + result.poiList.pois[0].name;
+                        }
+                    });
+                }
+
+            },
+            lng: 0,
+            lat: 0,
+
+            chestDialogVisible: false,
+            chestDialogLoading: false,
+            areaData: {},
+            chestData: [],
+
+            chestEditDialogVisible: false,
+            chestEditDialogLoading: false,
+            chestEditForm: {}
+        }
+    },
+    created() {
+        this.getstore();
+        this.getData();//初始化
+        this.getcategoryTree();//初始化
+    },
+    methods: {
+        addMarker: function () {
+            let lng = 121.5 + Math.round(Math.random() * 1000) / 10000;
+            let lat = 31.197646 + Math.round(Math.random() * 500) / 10000;
+
+            this.marker = [lng, lat];
+        },
+        onSearchResult(pois) {
+            let latSum = 0;
+            let lngSum = 0;
+            if (pois.length > 0) {
+                pois.forEach(poi => {
+                    let {lng, lat} = poi;
+                    lngSum += lng;
+                    latSum += lat;
+                    this.marker = [poi.lng, poi.lat];
+                });
+                let center = {
+                    lng: lngSum / pois.length,
+                    lat: latSum / pois.length
+                };
+                this.mapCenter = [center.lng, center.lat];
+            }
+        },
+        clearForm() {
+            console.log(this.form);
+            this.selectform = {
+                name: '',
+            }
+        },
+        //是否支持送货上门
+        handleStatus  (row, value) {
+            let _this = this;
+                axios.post('/admin/Housingestate/setStatus', {
+                    id: row.id,
+                    status: value
+                }, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    // _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        if (value === 1) {
+                            _this.$message.success('已开启');
+                        } else {
+                            _this.$message.success('已关闭');
+                        }
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    // _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+        },
+        //区域分类
+        getcategoryTree () {
+            let _this = this;
+            axios.get('/admin/Store/tree', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            }).then(function (response) {
+                _this.categoryTree = response.data;
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        getstore() {
+            let _this = this;
+            axios.get('/admin/Housingestate/getstorelist', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            }).then(function (response) {
+                _this.dialogLoading = false;
+                // if (response.data.code === 1) {
+                _this.stores = response.data;
+                //     _this.totalNum = response.data.data.count;
+                // } else {
+                //     _this.$message({
+                //         message: response.data.msg,
+                //         type: 'warning'
+                //     });
+                // }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        //首页获取列表数据
+        getData(page = 1) {
+            let _this = this;
+            let params = {page: page};
+            this.onDataLoading = true;
+            if (this.selectform.name !== '') {
+                params.name = this.selectform.name;
+            }
+            if (this.selectform.store_id !== '') {
+                params.store_id = this.selectform.store_id;
+            }
+
+            axios.get('/admin/housingestate/index', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then(function (response) {
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.tableData = response.data.data.list;
+                    _this.totalNum = response.data.data.count;
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        edit(row) {
+            console.log(row);
+            let _this = this;
+
+            if (row) {
+                this.form = JSON.parse(JSON.stringify(row));
+                console.log(row);
+                this.marker = [row.map_x, row.map_y];
+                this.mapCenter = [row.map_x, row.map_y];
+
+                var dataIntArr=[];//保存转换后的整型字符串
+                //方法一
+                row.area_id_path.forEach(function(data,index,arr){
+                    dataIntArr.push(+data);
+                });
+                this.form.category_id = dataIntArr;
+                // var dataIntArr=[];//保存转换后的整型字符串
+                // //方法一
+                // row.category_id.forEach(function(data,index,arr){
+                //     dataIntArr.push(+data);
+                // });
+                // this.storeform.category_id = dataIntArr;
+            } else {
+                this.form = {
+                    id: '',
+                    name: '',
+                    store_id: '',
+                    map_x: '',
+                    map_y: '',
+                    map_id: '',
+                    map_name: '',
+                    address: '',
+                    status: 1,
+                    instant_delivery: 0
+                };
+                this.mapCenter = [120.904166, 32.021917];
+                this.marker = [120.904166, 32.021917];
+            }
+            this.dialogStoreVisible = true;
+        },
+        //数据提交
+        submit(form) {
+            let _this = this;
+            this.dialogLoading = true;
+
+            this.$refs[form].validate((valid) => {
+                if (valid) {
+                    axios.post('/admin/housingestate/housingestateSubmit', this.form, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    }).then(function (response) {
+                        console.log(response);
+                        _this.dialogLoading = false;
+
+                        if (response.data.code === 1) {
+                            if (_this.form.id === '') {
+                                _this.$message.success('新增完成');
+                            } else {
+                                _this.$message.success('修改成功');
+                            }
+                            _this.dialogStoreVisible = false;
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.dialogLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                } else {
+                    console.log('error submit!!');
+                    _this.dialogLoading = false;
+                    return false;
+                }
+            });
+        },
+        showChest (row) {
+            this.areaData = row;
+            this.chestDialogVisible = true;
+            this.chestData = [];
+            this.getChestData(this.areaData.id);
+        },
+        getChestData (id) {
+            let _this = this;
+            let params = {
+                id: id
+            };
+            this.chestDialogLoading = true;
+            axios.get('/admin/housingestate/getChest', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then(function (response) {
+                _this.chestDialogLoading = false;
+                if (response.data.code === 1) {
+                    _this.chestData = response.data.data;
+                } else {
+                    _this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                _this.chestDialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        editChest (row = null) {
+            if (row) {
+                this.chestEditForm = JSON.parse(JSON.stringify(row));
+            } else {
+                this.chestEditForm = {
+                    id: '',
+                    num: '',
+                    name: '',
+                    status: 1
+                };
+            }
+            this.chestEditDialogVisible = true;
+        },
+        chestSubmit () {
+            let _this = this;
+            let params = {
+                num: this.chestEditForm.num,
+                name: this.chestEditForm.name,
+                status: this.chestEditForm.status,
+            };
+            if (this.chestEditForm.id === '') {
+                params.area_id = this.areaData.id
+            } else {
+                params.id = this.chestEditForm.id
+            }
+            this.chestEditDialogLoading = true;
+            axios.post('/admin/housingestate/chestSubmit', params, {
+                headers: this.headers
+            }).then(function (response) {
+                _this.chestEditDialogLoading = false;
+                if (response.data.code === 1) {
+                    if (_this.chestEditForm.id === '') {
+                        _this.$message.success('新增完成');
+                    } else {
+                        _this.$message.success('修改成功');
+                    }
+                    _this.chestEditDialogVisible = false;
+                    _this.getChestData(_this.areaData.id);
+                } else {
+                    _this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                _this.chestEditDialogLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+        handleChestStatus  (row, value) {
+            let _this = this;
+            let msg = '此操作将上线此智能柜，是否继续?';
+            if (value === 0) {
+                msg = '此操作将下线此智能柜，是否继续?';
+            }
+            this.$confirm(msg, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                _this.onDataLoading = true;
+                axios.post('/admin/housingestate/setChestStatus', {
+                    id: row.id,
+                    status: value
+                }, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        if (value === 1) {
+                            _this.$message.success('成功开启');
+                        } else {
+                            _this.$message.success('成功关闭');
+                        }
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            }).catch(() => {
+                row.status = value === 0 ? 1 : 0;
+                this.$message.info('取消操作');
+            });
+        },
+        chestDestroy (id) {
+            let _this = this;
+            this.$confirm('此操作将永久删除该智能柜，是否继续?', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                _this.onDataLoading = true;
+                axios.post('/admin/housingestate/chestDestroy', {
+                    id: id
+                }, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('删除成功');
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            }).catch(() => {
+                this.$message.info('取消删除');
+            });
+        },
+        formatDate(timestamp) {
+            let date = new Date(timestamp * 1000);
+            return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDay()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+        },
+        prefix(num) {
+            if (num < 10) {
+                return '0' + num;
+            }
+            return num;
+        }
+    }
+});
+</script>

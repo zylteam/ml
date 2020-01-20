@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>店铺信息</title>
+
+    <link rel="stylesheet" href="__TMPL__/user/src/style.css">
+
+    <link rel="stylesheet" href="__TMPL__/user/src/iconfont.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.11.0/lib/theme-chalk/index.css">
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.22/dist/vue.js"></script>
+
+    <script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+
+    <script src="https://unpkg.com/element-ui@2.11.0/lib/index.js"></script>
+
+</head>
+
+<style>
+
+
+
+    .bot {
+
+        position: fixed;
+
+        left: 0;
+
+        bottom: 0;
+
+        width: 100%;
+
+        background: #fff;
+
+        box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.1);
+
+    }
+
+
+
+    input {
+
+        background: #fff;
+
+        border: none;
+
+        line-height: 1;
+
+    }
+
+
+
+    .storePic img {
+
+        width: 5rem;
+
+        height: 5rem;
+
+        border-radius: 0.8rem;
+
+    }
+
+
+
+    .el-input__inner {
+
+        border: none;
+
+    }
+
+</style>
+
+
+
+<body>
+
+<div id="app">
+
+    <div class="top flex text-c" id="headerTop">
+
+        <i class="iconfont icon-left" onclick="goBack()"></i>
+
+        <p class="flex_f1">店铺信息</p>
+
+        <span></span>
+
+    </div>
+
+
+
+    <div class="m25 p_l_r25 bc_fff">
+
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+
+            <span class="c_666 ">店铺名称</span>
+
+            <span class="c_666"> ：</span>
+
+            <p class="">{$store_info.store_name}</p>
+
+        </div>
+
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+
+            <span class="c_666 ">店铺地址</span>
+
+            <span class="c_666"> ：</span>
+
+            <p class="">{$store_info.address}</p>
+
+        </div>
+
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+
+            <span class="c_666 ">联系电话</span>
+
+            <span class="c_666"> ：</span>
+
+            <el-input v-model="phone" style="width:12rem"></el-input>
+
+            <span class="btnmini ml20" @click="update_store('phone')">修改</span>
+
+            <p class="flex_f1"></p>
+
+        </div>
+
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+
+            <span class="c_666 ">店铺头像</span>
+
+            <span class="c_666"> ：</span>
+
+            <p class="storePic">
+
+                <img src="{$store_info.logo}" class="mr20">
+
+            </p>
+
+            <span class="btnmini ml20">修改</span>
+
+        </div>
+
+        <div class="flex borderb1 pt25 pb20 fontsize28 lineheight1 flex_vc">
+
+            <span class="c_666 ">营业时间</span>
+
+            <span class="c_666"> ：</span>
+
+            <el-input v-model="business_time" style="width:12rem"></el-input>
+
+            <span class="btnmini ml20" @click="update_store('business_time')">修改</span>
+
+            <p class="flex_f1"></p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+</body>
+
+<script>
+
+function goBack(){
+    window.history.back(-1); 
+}
+
+    var app = new Vue({
+
+            el: '#app',
+
+            data: function () {
+
+                return {
+
+                    phone: '',
+
+                    business_time: '',
+
+                    store_info: {},
+
+                };
+
+            },
+
+            created() {
+
+                this.store_info = {$store_info};
+
+                this.business_time = this.store_info.business_time;
+
+                this.phone = this.store_info.phone;
+
+            },
+
+            methods: {
+
+                update_store(field) {
+
+                    let _this = this;
+
+                    let params = {store_id: _this.store_info.id}
+
+                    params.field = field;
+
+                    params.value = _this[field];
+
+                    axios.post("{:url('api/store/update_store_info')}", params, {
+
+                        headers: {
+
+                            'X-Requested-With': 'XMLHttpRequest',
+
+                        },
+
+
+
+                    }).then(function (response) {
+
+                        _this.onDataLoading = false;
+
+                        if (response.data.code === 1) {
+
+                            _this.$message({
+
+                                message: response.data.msg,
+
+                                type: 'success'
+
+                            });
+
+                            // _this.totalNum = response.data.data.count;
+
+                        } else {
+
+                            _this.$message({
+
+                                message: response.data.msg,
+
+                                type: 'warning'
+
+                            });
+
+                        }
+
+                    }).catch(function (error) {
+
+                        _this.onDataLoading = false;
+
+                        _this.$message.error(error.toString())
+
+                    })
+
+                },
+
+            }
+
+        })
+
+    ;
+
+</script>
+
+</html>

@@ -1,0 +1,36 @@
+<include file="public@header"/>
+</head>
+<body>
+<div class="wrap js-check-wrap">
+    <ul class="nav nav-tabs">
+        <li ><a href="{:url('category/othercatelist')}">其他分类</a></li>
+        <li class="active"><a href="{:url('category/detail',array('alias'=>$alias))}">企业性质分类</a></li>
+    </ul>
+    <form method="post" class="js-ajax-form margin-top-20">
+        <table class="table table-hover table-bordered">
+            <thead>
+            <tr>
+                <th style="width: 90px;">ID</th>
+                <th>名称</th>
+                <th>排序</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <foreach name="list" item="vo">
+                <tr>
+                    <td>{$vo.id}</td>
+                    <td>{$vo.name}</td>
+                    <td>{$vo.order}</td>
+                    <td>
+                        <a href="{:url('category/edit',array('id'=>$vo['id']))}" >编辑</a>
+                    </td>
+                </tr>
+            </foreach>
+            </tbody>
+        </table>
+    </form>
+</div>
+<script src="__STATIC__/js/admin.js"></script>
+</body>
+</html>

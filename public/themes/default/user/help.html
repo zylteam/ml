@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>帮助中心</title>
+
+    <link rel="stylesheet" href="__TMPL__/user/src/style.css">
+
+    <link rel="stylesheet" href="__TMPL__/user/src/iconfont.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.11.0/lib/theme-chalk/index.css">
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.22/dist/vue.js"></script>
+
+    <script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+
+    <script src="https://unpkg.com/element-ui@2.11.0/lib/index.js"></script>
+
+</head>
+
+<style>
+
+
+</style>
+
+
+
+<body>
+
+<div id="app" v-cloak>
+
+    <div class="top flex text-c" id="headerTop">
+
+        <i class="iconfont icon-left" onclick="goBack()"></i>
+
+        <p class="flex_f1">帮助中心</p>
+
+        <span></span>
+
+    </div>
+
+    <div class="m_l_r25 mt20 ">
+        这里是副文本
+    </div>
+
+</div>
+
+</body>
+
+<script>
+function goBack(){
+    window.history.back(-1); 
+}
+    var app = new Vue({
+
+        el:"#app",
+
+        data: function () {
+
+            return {           
+
+            }
+
+        },
+
+        created() {
+
+        
+
+        },
+
+        methods: {
+           
+
+        }
+
+    })
+
+</script>
+
+</html>

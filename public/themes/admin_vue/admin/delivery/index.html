@@ -1,0 +1,367 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+.avatar-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.avatar-uploader .el-upload:hover {
+    border-color: #409EFF;
+}
+.avatar-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+    width: 160px;
+    height: 90px;
+    line-height: 90px;
+    text-align: center;
+}
+.avatar {
+    width: 160px;
+    height: 90px;
+    display: block;
+}
+.banner-img {
+    width: 100%;
+    border-radius: 4px;
+}
+.add-goods {
+    height: 32px;
+    line-height: 30px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="商品管理" v-loading="onDataLoading" style="min-height: 400px">
+            <el-row>
+                <el-col :span="16">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="日期:">
+                            <el-date-picker v-model="form.date" value-format="timestamp" align="right" type="date" placeholder="选择日期" :picker-options="pickerOptions1"></el-date-picker>
+                        </el-form-item>
+                        <el-form-item label="配送时间段:">
+                            <el-select v-model="form.time" placeholder="请选择">
+                                <el-option label="上午" :value="0"></el-option>
+                                <el-option label="下午" :value="1"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-checkbox v-model="form.all" :true-label="1" :false-label="0">显示全部</el-checkbox>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="8" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="exportUnDeliveryGoods()">导出未配货</el-button>
+                    <el-button type="primary" size="mini" @click="exportDeliveryGoods()">导出全部</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="name" label="商品名称" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="number" label="未配货数量" min-width="140">
+                    <template slot-scope="scope">
+                        {{scope.row.number}} 份
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="200">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="detailList(scope.row)">明细</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="dialogVisible" width="80%" v-loading.fullscreen="dialogLoading" title="商品配送明细"  :class="{'edit-able': editState === 1}">
+        <el-table :data="detailData" style="width: 100%">
+            <el-table-column prop="name" label="商品名称" min-width="100" show-overflow-tooltip fixed="left"></el-table-column>
+            <el-table-column prop="order_id" label="订单号" min-width="100" show-overflow-tooltip></el-table-column>
+            <el-table-column prop="number" label="数量" min-width="140">
+                <template slot-scope="scope">
+                    {{scope.row.number}} 份
+                </template>
+            </el-table-column>
+            <el-table-column prop="user_nickname" label="用户昵称" min-width="100" show-overflow-tooltip></el-table-column>
+            <el-table-column prop="address.name" label="收货人姓名" min-width="120"></el-table-column>
+            <el-table-column prop="address.mobile" label="收货手机号" min-width="120"></el-table-column>
+            <el-table-column prop="address.address" label="收货地址" min-width="200" show-overflow-tooltip>
+                <template slot-scope="scope">
+                    {{scope.row.address.area}} {{scope.row.address.housingestate}} {{scope.row.address.address}}
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" fixed="right" width="80">
+                <template slot-scope="scope">
+                    <el-button v-if="scope.row.delivery_completed === 0" size="mini" type="text" @click="changeDeliveryStatus(scope.row.id, 1)">完成配货</el-button>
+                    <el-button v-else size="mini" type="text" @click="changeDeliveryStatus(scope.row.id, 0)">取消</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination background layout="prev, pager, next" :total="detailTotalNum" :current-page.sync="detailCurrentPage" @current-change="getDetailData"></el-pagination>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    date: '',
+                    time: '',
+                    all: 0
+                },
+                pickerOptions1: {
+                    shortcuts: [{
+                        text: '今天',
+                        onClick(picker) {
+                            let date = new Date();
+                            picker.$emit('pick', new Date(`${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`));
+                        }
+                    }]
+                },
+                editForm: {},
+                editState: 0,
+                dialogVisible: false,
+                dialogLoading: false,
+
+                // 商品明细数据
+                detailData: [],
+                detailTotalNum: 0,
+                detailCurrentPage: 1
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    date: '',
+                    time: '',
+                    all: 0
+                };
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {
+                    page: page,
+                    all: this.form.all
+                };
+                this.onDataLoading = true;
+                if (this.form.date !== ''){
+                    params.date = this.form.date / 1000;
+                }
+                if (this.form.time !== ''){
+                    params.time = this.form.time;
+                }
+                axios.get('/admin/delivery/index', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            detailList(row) {
+                this.editForm = JSON.parse(JSON.stringify(row));
+                this.dialogVisible = true;
+                this.detailData = [];
+                this.getDetailData();
+            },
+            getDetailData(page = 1) {
+                let params = {
+                    page: page,
+                    goods_id: this.editForm.goods_id
+                };
+                this.dialogLoading = true;
+                if (this.editForm.filter.date !== ''){
+                    params.date = this.editForm.filter.date;
+                }
+                if (this.editForm.filter.time !== ''){
+                    params.time = this.editForm.filter.time;
+                }
+                axios.get('/admin/Delivery/detail', {
+                    headers: this.headers,
+                    params: params
+                }).then((response) => {
+                    this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        this.detailData = response.data.data.data;
+                        this.detailTotalNum = response.data.data.total;
+                        this.detailCurrentPage = response.data.data.current_page;
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.dialogLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            changeDeliveryStatus (id, status) {
+                this.$confirm('是否修改配货状态?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.onDataLoading = true;
+                    axios.post('/admin/delivery/changeDeliveryStatus', {
+                        id: id,
+                        status: status
+                    }, {
+                        headers: this.headers
+                    }).then((response) => {
+                        this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            this.$message.success('修改成功');
+                            this.getDetailData(this.detailCurrentPage);
+                        } else {
+                            this.$message.warning(response.data.msg);
+                        }
+                    }).catch((error) => {
+                        this.onDataLoading = false;
+                        this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                });
+            },
+            exportUnDeliveryGoods () {
+                if (this.form.date === '') {
+                    this.$message.warning('请选择日期');
+                    return false;
+                }
+                if (this.form.time === '') {
+                    this.$message.warning('请选择配送时间段');
+                    return false;
+                }
+                window.open(`/admin/Delivery/exportUnDeliveryGoods?date=${this.form.date/1000}&time=${this.form.time}`);
+            },
+            exportDeliveryGoods () {
+                if (this.form.date === '') {
+                    this.$message.warning('请选择日期');
+                    return false;
+                }
+                if (this.form.time === '') {
+                    this.$message.warning('请选择配送时间段');
+                    return false;
+                }
+                window.open(`/admin/Delivery/exportDeliveryGoods?date=${this.form.date/1000}&time=${this.form.time}`);
+            },
+            toChoseUser () {
+                this.onChoseUser = true;
+                this.getUserData();
+            },
+            choseUser (row) {
+                for (user of this.giveCouponForm.users) {
+                    if (user.id === row.id) {
+                        this.$message.warning('已经选择过该用户');
+                        return;
+                    }
+                }
+                this.giveCouponForm.users.push(JSON.parse(JSON.stringify(row)));
+                this.onChoseUser = false;
+            },
+            getUserData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.userDialogLoading = true;
+                if (this.form.name !== ''){
+                    params.name = this.form.name;
+                }
+                if (this.form.status !== ''){
+                    params.status = this.form.status;
+                }
+                axios.get('/admin/coupon/getUsers', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.userDialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.userTableData = response.data.data.data;
+                        _this.userTotalNum = response.data.data.total;
+                        _this.userCurrentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.userDialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            give () {
+                let _this = this;
+                let params = {};
+                params = {
+                    id: this.giveCouponForm.id,
+                    range_type: this.giveCouponForm.range_type,
+                    active_time: this.giveCouponForm.active_time / 1000,
+                    num: this.giveCouponForm.num
+                };
+                if (params.range_type === 0) {
+                    params.users = [];
+                    for (let user of this.giveCouponForm.users) {
+                        params.users.push(user.id);
+                    }
+                }
+                this.giveCouponLoading = true;
+                axios.post('/admin/coupon/give', params, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.giveCouponLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('发放完成');
+                        _this.onGiveCoupon = false;
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.giveCouponLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+            },
+            formatDateWithTime (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return `${date.getFullYear()}-${this.prefix(date.getMonth() + 1)}-${this.prefix(date.getDate())} ${this.prefix(date.getHours())}:${this.prefix(date.getMinutes())}:${this.prefix(date.getSeconds())}`;
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

@@ -1,0 +1,218 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<script src="https://unpkg.com/vue-chartjs/dist/vue-chartjs.min.js"></script>
+<include file="public@header_vue"/>
+</head>
+<body>
+<div id="app">
+
+    <!--<el-alert-->
+            <!--title="提示：当前默认展示的是销售前20的商品"-->
+            <!--type="warning"-->
+            <!--:closable="false">-->
+    <!--</el-alert>-->
+
+    <el-form :inline="true" :model="form" class="demo-form-inline" size="mini" v-loading="onDataLoading" style="margin-top: 10px;">
+
+        <el-form-item label="时间：">
+            <el-date-picker v-model="form.date" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="timestamp" style="width: 220px"></el-date-picker>
+        </el-form-item>
+
+
+        <el-form-item>
+            <el-button type="danger" @click="clearForm()">清空</el-button>
+            <el-button type="primary" @click="fetchData()">查询</el-button>
+        </el-form-item>
+
+        <el-form-item label="范围：">
+            <el-button type="info" size="mini" @click="topBuy()">销售前20</el-button>
+            <el-button type="info" size="mini" @click="lastBuy()">销售后20</el-button>
+        </el-form-item>
+
+    </el-form>
+
+
+    <!--<template>-->
+        <!--<div class="small">-->
+            <!--<canvas id="myChart2" width="500px" height="240px"></canvas>-->
+        <!--</div>-->
+    <!--</template>-->
+
+
+    <div>
+        <div id="line-echar" style="height:550px;">
+        </div>
+    </div>
+
+
+</div>
+</body>
+<style>
+    .small {
+        /*width: 1200px;*/
+        /*height: 1000px;*/
+    }
+</style>
+<script type="text/javascript" src="/echarts/echarts.js"></script>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                labels:[],
+                number:[],
+                form:{
+                    date:'',
+                },
+                value4:'',
+                value5: '',
+                onDataLoading:false,
+                top:'',
+                last:'',
+            }
+        },
+        mounted () {
+            var goods  = JSON.parse('{$goods}');
+            var number = JSON.parse('{$numbers}');
+            this.labels = goods;
+            this.number = number;
+            this.chart();
+        },
+        created () {
+
+        },
+        methods: {
+
+            clearForm () {
+                console.log(this.form);
+                this.form = {
+                    date:''
+                }
+            },
+
+            chart () {
+                var myChart = echarts.init(document.getElementById('line-echar'));
+                option = {
+                    title: {
+                        text: '单品下单数量统计',
+
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data:['单品下单数量统计']
+                    },
+                    toolbox: {
+                        padding:30,
+                        show: true,
+                        feature: {
+                            dataZoom: {
+                                yAxisIndex: 'none'
+                            },
+                            dataView: {readOnly: false},
+                            magicType: {type: ['line', 'bar']},
+                            restore: {},
+                            saveAsImage: {}
+                        }
+                    },
+
+                    xAxis:  {
+                        type: 'category',
+                        boundaryGap: true,//设为false柱状图的第一列会压住纵坐标
+                        data: this.labels,
+                        "axisLabel":{
+                            interval: 0,
+                            rotate:"20"
+                        }
+                    },
+
+                    grid:{
+                        x:35,
+                        // y:45,
+                        // x2:5,
+                        // y2:20,
+                        borderWidth:1
+                    },
+
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: {
+                            formatter: '{value}'
+                        }
+                    },
+                    series: [
+                        {
+                            name:'单品下单数量统计',
+                            type:'bar',
+                            data:this.number,
+                            markPoint: {
+                                data: [
+                                    {type: 'max', name: '最大值'},
+                                    {type: 'min', name: '最小值'}
+                                ]
+                            }
+
+                        },
+
+
+                    ]
+                };
+
+                myChart.setOption(option);
+            },
+
+
+            fetchData () {
+                let _this = this;
+                let date = '';
+                if(_this.form.date != ''){
+                    date = this.form.date;
+                }
+
+                let top  = this.top;
+                let last = this.last;
+
+                this.onDataLoading = true;
+
+                axios.post('/admin/Statistical/itemBuyCount', { date:date ,top:top ,last:last }, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    console.log(response);
+                    _this.onDataLoading = false;
+
+                    if (response.data.code === 1) {
+
+                        _this.labels = response.data.data.goods;
+                        _this.number = response.data.data.number;
+                        _this.chart();
+
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString());
+                });
+
+            },
+            topBuy () {
+                this.top  = 1;
+                this.last = '';
+                this.fetchData();
+            },
+
+            lastBuy () {
+                this.last = 1;
+                this.top  = '';
+                this.fetchData();
+            },
+
+        }
+    });
+</script>
+</html>

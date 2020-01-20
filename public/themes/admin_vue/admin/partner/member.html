@@ -1,0 +1,225 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="合伙人列表" v-loading="onDataLoading" style="min-height: 400px;">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="搜索:">
+                            <el-input v-model="form.like" placeholder="手机号/昵称" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-date-picker v-model="form.date_range" type="daterange" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="pickerOptions2"></el-date-picker>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right;">
+                    <el-button type="primary" @click="addPartner()" size="mini">新增</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="80"></el-table-column>
+                <el-table-column prop="user_nickname" label="合伙人昵称" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="mobile" label="合伙人手机号" min-width="120"></el-table-column>
+                <el-table-column prop="parent_user_nickname" label="上级昵称" min-width="100" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        {{scope.row.parent_user_nickname ? scope.row.parent_user_nickname : '无上级'}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="parent_mobile" label="上级手机号" min-width="120">
+                    <template slot-scope="scope">
+                        {{scope.row.parent_mobile ? scope.row.parent_mobile : '无上级'}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="sub_number" label="拥有下级" min-width="80"></el-table-column>
+                <el-table-column prop="create_time" label="加入时间" width="160">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.create_time)}}
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading" title="新增合伙人">
+        <el-form :model="editForm" label-width="100px">
+            <el-form-item label="用户手机号:">
+                <el-input v-model="editForm.mobile" placeholder="用户手机号"></el-input>
+            </el-form-item>
+            <el-form-item label="上级手机号:">
+                <el-input v-model="editForm.parent_mobile" placeholder="上级手机号，可选"></el-input>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">退出</el-button>
+            <el-button type="primary" @click="submit">保存</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    like: '',
+                    date_range: []
+                },
+                pickerOptions2: {
+                    onPick (date) {
+                        if (date.maxDate) {
+                            date.maxDate.setTime(date.maxDate.getTime() + 86400000 - 1000);
+                        }
+                    },
+                    shortcuts: [{
+                        text: '最近七天',
+                        onClick(picker) {
+                            const end = new Date();
+                            let start = new Date();
+                            start = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+                            end.setTime(start.getTime() + 3600 * 1000 * 24 * 8 - 1000);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '本月',
+                        onClick(picker) {
+                            const start = new Date();
+                            start.setTime(new Date(`${start.getFullYear()}-${start.getMonth() + 1}`));
+                            let year = start.getFullYear();
+                            let month = start.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            let end = new Date(`${year}-${month}`);
+                            end.setTime(end.getTime() - 1000);
+
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            let year = end.getFullYear();
+                            let month = end.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            end.setTime(new Date(`${year}-${month}`).getTime() - 1000);
+
+                            let startYear = end.getFullYear();
+                            let startMonth = end.getMonth() - 1;
+                            if (startMonth <= 0) {
+                                startMonth += 12;
+                                startYear--;
+                            }
+                            let start = new Date(`${startYear}-${startMonth}`);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
+
+                dialogVisible: false,
+                dialogLoading: false,
+                editForm: {}
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    like: '',
+                    date_range: []
+                };
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.like !== ''){
+                    params.like = this.form.like;
+                }
+                if (this.form.date_range.length === 2){
+                    params.date_range = [
+                        this.form.date_range[0] / 1000,
+                        this.form.date_range[1] / 1000
+                    ];
+                }
+                axios.get('/admin/Partner/member', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            addPartner () {
+                this.editForm = {
+                    mobile: '',
+                    parent_mobile: ''
+                };
+                this.dialogVisible = true;
+            },
+            submit () {
+                this.dialogLoading = true;
+                axios.post('/admin/Partner/memberSubmit', this.editForm, {
+                    headers: this.headers
+                }).then((response) => {
+                    this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        this.$message.success('保存成功');
+                        this.dialogVisible = false;
+                        this.getData();
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.dialogLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return `${date.getFullYear()}-${this.prefix(date.getMonth() + 1)}-${this.prefix(date.getDate())} ${this.prefix(date.getHours())}:${this.prefix(date.getMinutes())}:${this.prefix(date.getSeconds())}`;
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

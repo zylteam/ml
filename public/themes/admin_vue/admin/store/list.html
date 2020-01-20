@@ -1,0 +1,746 @@
+<include file="public@header_vue"/>
+<script src="//unpkg.com/wangeditor@3.1.1/release/wangEditor.min.js"></script>
+<!--地图组件-->
+<script src="//unpkg.com/vue-amap@0.5.8/dist/index.js"></script>
+<style>
+    .el-pagination {
+        margin-top: 20px;
+    }
+
+    .avatar {
+        width: 40px;
+        height: auto;
+    }
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="店铺列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" class="demo-form-inline" size="mini">
+                        <el-form-item label="店铺名称：">
+                            <el-input v-model="form.name" placeholder="店铺名称"></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null)">新增</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="ID" width="50"></el-table-column>
+                <el-table-column prop="store_name" label="店铺名称"></el-table-column>
+                <el-table-column prop="phone" label="联系电话"></el-table-column>
+                <el-table-column prop="product_count" label="团品数量">
+                    <template slot-scope="scope">
+                        <el-link :href="'/admin/product/list?store_id='+scope.row.id" type="primary">
+                            {{scope.row.product_count}}
+                        </el-link>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="is_show" label="是否使用">
+                    <template slot-scope="scope">
+                        <el-switch
+                                v-model="scope.row.is_show"
+                                active-color="#13ce66"
+                                :active-value="0"
+                                :inactive-value="1"
+                                @change="change_status('is_show',scope.row.is_show,scope.row.id)"
+                                inactive-color="#ff4949">
+                        </el-switch>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="login_name" label="登录账号"></el-table-column>
+                <el-table-column prop="address" label="门店地址" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="add_time" label="创建时间" min-width="120">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.add_time)}}
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="180">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="edit(scope.row)">编辑</el-button>
+                        <el-button size="mini" type="text" @click="edit_product(scope.row)">添加团品</el-button>
+                        <el-button size="mini" type="text" @click="delete_product(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="total,prev, pager, next" :total="totalNum" :page-size="10"
+                           :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <!--门店新增、编辑-->
+    <el-dialog :title="storeform.id == '' ? '新增店铺' : '修改店铺'" :visible.sync="dialogStoreVisible"
+               v-loading.fullscreen="dialogLoading" width="62%">
+        <el-form :model="storeform" class="demo-form-inline" :rules="rules" ref="storeform" label-width="200px">
+            <el-form-item label="店铺名称" prop="store_name">
+                <el-col :span="18">
+                    <el-input v-model="storeform.store_name" placeholder="店铺名称"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="店铺地址" prop="address">
+                <el-col :span="18">
+<!--                    <el-input v-model="storeform.address" placeholder="店铺地址"-->
+<!--                              @blur.prevent="get_address_lat_lag(storeform.address)"></el-input>-->
+                    <el-input placeholder="请在地图中获取地址坐标" v-model="storeform.address">
+                        <template slot="append"><span @click="dialogmapVisible = true">打开地图</span></template>
+                    </el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="联系电话" prop="phone">
+                <el-col :span="18">
+                    <el-input v-model="storeform.phone" placeholder="联系电话"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="营业时间" prop="business_time">
+                <el-col :span="18">
+                    <el-input v-model="storeform.business_time" placeholder="营业时间"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="logo" prop="logo">
+                <el-col :span="18">
+                    <el-upload
+                            class="avatar-uploader"
+                            action="http://ml.0513app.cn/api/upload/upload"
+                            :show-file-list="false"
+                            :on-success="handleAvatarSuccess"
+                            :before-upload="beforeAvatarUpload">
+                        <img v-if="storeform.logo" :src="storeform.logo" class="avatar">
+                        <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                    </el-upload>
+                </el-col>
+            </el-form-item>
+
+            <el-form-item label="用户名" prop="login_name">
+                <el-col :span="18">
+                    <el-input v-model="storeform.login_name" placeholder="用户名"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="密码" prop="login_pass">
+                <el-col :span="18">
+                    <el-input v-model="storeform.login_pass" type="password" placeholder="密码"></el-input>
+                </el-col>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button v-if="storeform.id === ''" type="primary" @click="submit('storeform')">新增</el-button>
+            <el-button v-else type="primary" @click="submit('storeform')">修改</el-button>
+        </span>
+    </el-dialog>
+    <!--团品添加-->
+    <el-dialog title="添加团品" :visible.sync="dialogProductVisible"
+               v-loading.fullscreen="dialogLoading" width="62%">
+        <el-form :model="product_form" class="demo-form-inline" :rules="product_rules" ref="product_form"
+                 label-width="130px">
+            <el-form-item label="团品名称" prop="product_name">
+                <el-col :span="24">
+                    <el-input v-model="product_form.product_name" placeholder="团品名称"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="团品图片" prop="product_img">
+                <el-col :span="24">
+                    <div v-for="photo in product_form.product_img" class="photos">
+                        <img :src="photo"/>
+                        <div class="photos-options">
+                            <el-button icon="el-icon-delete" type="text" @click="handleRemove(photo)"></el-button>
+                        </div>
+                    </div>
+                    <el-upload class="photos-uploader logo-uploader" action="/api/upload/upload" :headers="headers"
+                               :show-file-list="false" :on-success="handleintroimgSuccess" multiple>
+                        <i class="el-icon-plus logo-uploader-icon"></i>
+                    </el-upload>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="团品原价" prop="price">
+                <el-col :span="24">
+                    <el-input v-model="product_form.price" placeholder="团品原价"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="购买限制" prop="limits">
+                <el-col :span="24">
+                    <el-input v-model="product_form.limits" placeholder="购买限制"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="团品售价" prop="sale_price">
+                <el-col :span="24">
+                    <el-input v-model="product_form.sale_price" placeholder="团品售价"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="服务费" prop="service_price">
+                <el-col :span="24">
+                    <el-input v-model="product_form.service_price" placeholder="服务费"></el-input>
+                </el-col>
+            </el-form-item>
+            <el-form-item label="团品详细" prop="detail">
+                <el-col :span="24">
+                    <div ref="editor" style="text-align:left"></div>
+                </el-col>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="submit('product_form')">新增</el-button>
+        </span>
+    </el-dialog>
+
+    <!--地图面板-->
+    <el-dialog title="地图" :visible.sync="dialogmapVisible" v-loading.fullscreen="dialogLoading">
+        <div class="amap-page-container">
+            <el-amap-search-box class="search-box" :search-option="searchOption" :on-search-result="onSearchResult"></el-amap-search-box>
+            <el-amap vid="amapDemo" :center="mapCenter" :zoom="18" class="amap-demo" :events="events">
+                <el-amap-marker :position="marker"></el-amap-marker>
+            </el-amap>
+            <div class="toolbar">
+                经纬度: [{{ storeform.mapx }}, {{ storeform.mapy }}] 地址: {{ storeform.address}}
+            </div>
+        </div>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="dialogmapVisible = false">确定</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<style>
+    /*.el-container { margin-bottom: 20px; margin-top: 20px; }*/
+    .amap-demo { height: 350px; }
+    .search-box {  position: absolute; top: 25px; left: 20px;}
+    .amap-page-container { position: relative; }
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .avatar-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 178px;
+        height: 178px;
+        line-height: 178px;
+        text-align: center;
+    }
+
+    .avatar {
+        width: 178px;
+        height: 178px;
+        display: block;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .photos {
+        width: 120px;
+        height: 120px;
+        border-radius: 6px;
+        overflow: hidden;
+        float: left;
+        margin-right: 10px;
+        margin-bottom: 10px;
+        position: relative;
+    }
+
+    .photos-options {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 120px;
+        line-height: 120px;
+        width: 120px;
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.6);
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.6s;
+    }
+
+    .photos:hover .photos-options {
+        opacity: 1;
+    }
+
+    .photos-options .el-button {
+        font-size: 24px;
+        color: white
+    }
+
+    .photos img {
+        width: 120px;
+        height: 120px;
+    }
+
+    .photos-uploader {
+        width: 120px;
+        height: 120px;
+        float: left;
+    }
+
+    .logo-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .logo-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .logo-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 120px;
+        height: 120px;
+        line-height: 120px;
+        text-align: center;
+    }
+</style>
+<script>
+    <!--高德地图配置-->
+    window.VueAMap.initAMapApiLoader({
+        key: '2df523c4daaf54c8fa91fc28f6e6d87e',
+        plugin: ['Autocomplete', 'PlaceSearch', 'Scale', 'OverView', 'ToolBar', 'MapType', 'PolyEditor', 'AMap.CircleEditor', 'Geolocation', 'Geocoder'],
+        // 默认高德 sdk 版本为 1.4.4
+        v: '1.4.4'
+    });
+    var E = window.wangEditor;
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            var checkPhone = (rule, value, callback) => {
+                if (!value) {
+                    return callback(new Error('手机号不能为空'));
+                } else {
+                    const reg = /^1[3|4|5|7|8][0-9]\d{8}$/
+                    if (reg.test(value)) {
+                        callback();
+                    } else {
+                        return callback(new Error('请输入正确的手机号'));
+                    }
+                }
+            };
+            var checkAddress = (rule, value, callback) => {
+                if (this.storeform.mapx == 0) {
+                    return callback(new Error('请输入正确的地址'));
+                } else {
+                    callback();
+                }
+            };
+            let self = this;
+            return {
+                tableData: [],
+                dialogmapVisible:false,
+                storeform: {
+                    id: "",
+                    store_name: "",
+                    address: "",//地址
+                    account_name: "",
+                    account_password: "",
+                    status: 1,
+                    contact_name: '',//联系人
+                    phone: '',//联系电话
+                    logo: '',
+                    business_time: '',
+                    mapx: 0,
+                    mapy: 0,
+                    map_id:'',
+                    map_name:'',
+                    name:'',
+                },
+                marker: [120.904166, 32.021917],
+                searchOption: {
+                    city: '南通',
+                    citylimit: true
+                },
+                mapCenter: [120.904166, 32.021917],
+                events: {
+                    //通过热点获得（为了更精确地址定位）
+                    'hotspotclick': (e) => {
+                        console.log(e);
+                        let {lng, lat} = e.lnglat;
+                        let _this = this;
+                        _this.storeform.mapx = lng;
+                        _this.storeform.mapy = lat;
+
+                        _this.marker = [lng, lat];
+                        let placeSearch = new AMap.PlaceSearch();
+                        placeSearch.getDetails(e.id, function (status, result) {
+
+                            self.dialogmapVisible = false;
+                            if (status === 'complete' && result.info === 'OK') {
+                                self.storeform.map_id = result.poiList.pois[0].id;
+                                self.storeform.map_name = result.poiList.pois[0].name;
+                                self.storeform.name = result.poiList.pois[0].name;
+                                self.storeform.address = result.poiList.pois[0].address + result.poiList.pois[0].name;
+                            }
+                        });
+
+                    }
+
+                },
+                imageUrl: '',
+                editor: null,
+                keyword:'',
+                onDataLoading: false,
+                dialogLoading: false,
+                dialogStoreVisible: false,
+                dialogProductVisible: false,
+                totalNum: 0,
+                dialogImageUrl: '',
+                currentPage: 1,
+                dialogVisible: false,
+                form: {
+                    name: '',
+                },
+                product_form: {
+                    product_name: '',
+                    product_img: [],
+                    price: '',
+                    sale_price: '',
+                    detail: '',
+                    service_price: '',
+                    store_id: 0,
+                    limits:0,
+                    id: 0,
+                },
+                product_rules: {
+                    product_name: [{required: true, message: '请输入团品名称', trigger: 'blur'}],
+                    product_img: [{required: true, message: '请上传团品图片', trigger: 'blur'}],
+                    price: [{required: true, message: '请输入团品原价', trigger: 'blur'}],
+                    sale_price: [{required: true, message: '请输入团品售价', trigger: 'blur'}],
+                    service_price: [{required: true, message: '请输入服务费', trigger: 'blur'}],
+                    store_id: [{required: true, message: '请选择店铺', trigger: 'blur'}],
+                },
+                rules: {
+                    store_name: [{required: true, message: '请输入门店名称', trigger: 'blur'}],
+                    business_time: [{required: true, message: '请输入营业时间', trigger: 'blur'}],
+                    address: [{required: true, validator: checkAddress, trigger: 'blur'}],
+                    logo: [{required: true, message: '请上传logo', trigger: 'blur'}],
+                    login_name: [{required: true, message: '请输入账号', trigger: 'blur'}],
+                    login_pass: [{required: true, message: '请输入密码', trigger: 'blur'}],
+                    contact_name: [{required: true, message: '请输入联系人', trigger: 'blur'}],
+                    phone: [
+                        {required: true, message: '请输入手机号码', trigger: 'blur'}
+                    ],
+                },
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            };
+
+        },
+        created() {
+            this.getData();
+        },
+        methods: {
+            clearForm() {
+                this.form = {
+                    name: '',
+                }
+            },
+            onSearchResult(pois) {
+                let latSum = 0;
+                let lngSum = 0;
+                if (pois.length > 0) {
+                    pois.forEach(poi => {
+                        let {lng, lat} = poi;
+                        lngSum += lng;
+                        latSum += lat;
+                        this.marker = [poi.lng, poi.lat];
+                    });
+                    let center = {
+                        lng: lngSum / pois.length,
+                        lat: latSum / pois.length
+                    };
+                    this.mapCenter = [center.lng, center.lat];
+                }
+            },
+            delete_product(row) {
+                let _this = this;
+                _this.$confirm('此操作将永久删除店铺以及所有团品优惠券, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    let params = {store_id: row.id}
+                    axios.get('/admin/store/delete', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        params: params
+                    }).then(function (response) {
+                        console.log(response);
+                        _this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            _this.getData(_this.currentPage)
+                        } else {
+                            _this.$message({
+                                message: response.data.msg,
+                                type: 'warning'
+                            });
+                        }
+                    }).catch(function (error) {
+                        _this.onDataLoading = false;
+                        _this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    _this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+            edit_product(row) {
+                // 编辑器逻辑，第一次打开时初始化编辑器,其他时候根据情况初始化内容或插入已有内容
+                this.storeform = JSON.parse(JSON.stringify(row));
+                if (this.editor == null) {
+                    let _this = this;
+                    setTimeout(function () {
+                        console.log(_this.$refs);
+                        _this.editor = new E(_this.$refs.editor);
+                        _this.editor.customConfig.uploadImgServer = '/api/upload/photoUpload';
+                        _this.editor.customConfig.uploadFileName = 'file';
+                        _this.editor.customConfig.uploadImgMaxLength = 1;
+                        _this.editor.customConfig.onchange = (html) => {
+                            _this.product_form.detail = html
+                        };
+                        _this.editor.create();
+                        _this.editor.txt.html(_this.product_form.detail);
+                    }, 1000);
+                }
+                this.product_form.store_id = this.storeform.id;
+                this.dialogProductVisible = true;
+            },
+            //首页获取列表数据
+            getData(page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.name !== '') {
+                    params.store_name = this.form.name;
+                }
+                console.log(params);
+                axios.get('/admin/store/list', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+                    console.log(response);
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.list;
+                        _this.totalNum = response.data.data.count;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            //商品图片
+            handleintroimgSuccess(res, file) {
+
+                if (res.error === 0) {
+                    console.log(res.url)
+                    this.product_form.product_img.push(res.url);
+                } else {
+                    this.$message.error(res.msg)
+                }
+                console.log(this.product_form.product_img)
+            },
+            edit(row) {
+                if (row) {
+                    this.storeform = JSON.parse(JSON.stringify(row));
+                    this.imageUrl = this.storeform.logo
+                } else {
+                    this.storeform = {
+                        id: "",
+                        store_name: "",
+                        address: "",//地址
+                        account_name: "",
+                        account_password: "",
+                        status: 1,
+                        contact_name: '',//联系人
+                        phone: '',//联系电话
+                        logo: '',
+                        business_time: '',
+                        mapx: 0,
+                        mapy: 0,
+                        map_id:'',
+                        map_name:'',
+                        name:'',
+                    };
+                }
+                this.dialogStoreVisible = true;
+            },
+            submit(form) {
+                console.log(form)
+                let _this = this;
+                this.dialogLoading = true;
+                if (form === 'product_form') {
+                    this.$refs[form].validate((valid) => {
+                        if (valid) {
+                            axios.post('/admin/product/update', this.product_form, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            }).then(function (response) {
+                                _this.dialogLoading = false;
+                                if (response.data.code === 1) {
+                                    if (_this.product_form.id === 0) {
+                                        _this.$message.success('新增完成');
+                                    } else {
+                                        _this.$message.success('修改成功');
+                                    }
+                                    _this.dialogProductVisible = false;
+                                    _this.getData();
+                                } else {
+                                    _this.$message.warning(response.data.msg);
+                                }
+                            }).catch(function (error) {
+                                _this.dialogLoading = false;
+                                _this.$message.error(error.toString())
+                            })
+                        } else {
+                            console.log('error submit!!');
+                            _this.dialogLoading = false;
+                            return false;
+                        }
+                    });
+                } else if (form === 'storeform') {
+                    _this.$refs[form].validate((valid) => {
+                        if (valid) {
+                            axios.post('/admin/store/storeSubmit', this.storeform, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            }).then(function (response) {
+                                _this.dialogLoading = false;
+                                if (response.data.code === 1) {
+                                    if (_this.storeform.id === '') {
+                                        _this.$message.success('新增完成');
+                                    } else {
+                                        _this.$message.success('修改成功');
+                                    }
+                                    _this.dialogStoreVisible = false;
+                                    _this.getData();
+                                } else {
+                                    _this.$message.warning(response.data.msg);
+                                }
+                            }).catch(function (error) {
+                                _this.dialogLoading = false;
+                                _this.$message.error(error.toString())
+                            })
+                        } else {
+                            console.log('error submit!!');
+                            _this.dialogLoading = false;
+                            return false;
+                        }
+                    });
+                }
+            },
+            change_status(field, value, id) {
+                let _this = this;
+                this.dialogLoading = true;
+                params = {field: field, value: value, id: id};
+                axios.post('/admin/store/change_status', params, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('修改完成');
+                        _this.getData();
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                })
+            },
+            handleAvatarSuccess(res, file) {
+                console.log(res.url)
+                this.imageUrl = URL.createObjectURL(file.raw);
+                this.storeform.logo = res.url;
+            },
+            beforeAvatarUpload(file) {
+                const isJPG = file.type === 'image/jpeg';
+                const isLt2M = file.size / 1024 / 1024 < 2;
+
+                if (!isJPG) {
+                    this.$message.error('上传头像图片只能是 JPG 格式!');
+                }
+                if (!isLt2M) {
+                    this.$message.error('上传头像图片大小不能超过 2MB!');
+                }
+                return isJPG && isLt2M;
+            },
+            get_address_lat_lag(res) {
+                console.log(res)
+                let _this = this;
+                let params = {};
+                params.address = res
+                axios.get('/api/index/get_address_to_lat_lag', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+                    console.log(response);
+                    if (response.data.code === 1) {
+                        _this.storeform.mapx = response.data.data.result.location.lng;
+                        _this.storeform.mapy = response.data.data.result.location.lat;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            handleRemove(file, fileList) {
+                let index = this.product_form.product_img.indexOf(file);
+                this.product_form.product_img.splice(index, 1);
+            },
+            handlePictureCardPreview(file) {
+                this.dialogImageUrl = file.url;
+                this.dialogVisible = true;
+            },
+            formatDate(timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDay()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+            },
+            prefix(num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    });
+</script>

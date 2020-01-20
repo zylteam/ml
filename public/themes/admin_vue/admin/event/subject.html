@@ -1,0 +1,488 @@
+<include file="public@header_vue"/>
+<!-- CDNJS :: Sortable (https://cdnjs.com/) -->
+<script src="//cdn.jsdelivr.net/npm/sortablejs@1.7.0/Sortable.min.js"></script>
+<!-- CDNJS :: Vue.Draggable (https://cdnjs.com/) -->
+<script src="//cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.15.0/vuedraggable.min.js"></script>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+.avatar-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.avatar-uploader .el-upload:hover {
+    border-color: #409EFF;
+}
+.avatar-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+    width: 150px;
+    height: 80px;
+    line-height: 80px;
+    text-align: center;
+}
+.avatar {
+    width: 150px;
+    /*height: 80px;*/
+    display: block;
+}
+.el-scrollbar__wrap {
+    overflow-x: hidden;
+}
+.el-scrollbar__view {
+    padding: 10px 10px 10px 0;
+}
+/* 商品卡片 */
+.goods-box {
+    display: inline-block;
+    width: 120px;
+    margin-left: 10px;
+    position: relative;
+}
+.goods-box .el-card__body {
+    padding: 0;
+}
+.goods-img {
+    width: 100%;
+}
+.goods-info {
+    padding: 0 10px 10px;
+}
+.goods-info p {
+    font-size: 10px;
+    color: #999999;
+    height: 20px;
+    line-height: 20px;
+    margin: 0;
+}
+.goods-name {
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap
+}
+.goods-price {
+    margin-top: 6px!important;
+}
+.goods-price span {
+    color: #D0021B;
+}
+
+.item-tool-box {
+    display: flex;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    padding-left: 20px;
+    padding-right: 20px;
+    position: absolute;
+    top: 0;
+    left: -20px;
+    background-color: rgba(0, 0, 0, 0.6);
+    transition: opacity 0.5s;
+    -webkit-transition: opacity 0.5s; /* Safari */
+    z-index: 10;
+}
+.item-tool-box .item-tool {
+    display: flex;
+    justify-content: center;
+    height: 100%;
+    vertical-align:middle;
+    text-align: center;
+    flex: 1;
+}
+.item-tool:first-child {
+    margin-left: 40px;
+}
+.item-tool:last-child {
+    margin-right: 40px;
+}
+.goods-box:hover .item-tool-box {
+    opacity: 1;
+}
+.top-img {
+    max-height: 60px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="专题管理" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="专题标题:">
+                            <el-input v-model="form.title" placeholder="专题标题" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+                <el-col :span="4" style="text-align: right">
+                    <el-button type="primary" size="mini" @click="edit(null)" icon="el-icon-plus">新增专题</el-button>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="title" label="专题标题" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="id" label="专题链接" min-width="100" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <span>https://new.ntcai.com/home/subject/index?id={{scope.row.id}}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="top_img" label="专题图片" min-width="100">
+                    <template slot-scope="scope">
+                        <img class="top-img" :src="scope.row.top_img"/>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="backgound_color" label="专题背景色" min-width="100">
+                    <template slot-scope="scope">
+                        <el-color-picker disabled v-model="scope.row.backgound_color"></el-color-picker>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="90">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="edit(scope.row)">编辑</el-button>
+                        <el-button size="mini" type="text" @click="del(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog fullscreen :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading" title="专题">
+        <el-form :model="editForm" label-width="72px">
+            <el-form-item label="专题标题:">
+                <el-input v-model="editForm.title" placeholder="专题标题"></el-input>
+            </el-form-item>
+            <el-form-item label="专题类型:">
+                <el-select v-model="editForm.list_show_type" placeholder="请选择">
+                    <el-option v-for="(item, i) in listShowTypes" :key="i" :label="item" :value="i"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="专题图片:">
+                <el-upload class="avatar-uploader" action="/user/Asset/webuploader" :headers="headers" :show-file-list="false" :on-success="handleImgSuccess">
+                    <img v-if="editForm.top_img" :src="editForm.top_img" class="avatar">
+                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                </el-upload>
+            </el-form-item>
+            <el-form-item label="专题背景:">
+                <el-color-picker v-model="editForm.backgound_color"></el-color-picker>
+            </el-form-item>
+            <el-form-item label="专题商品:">
+                <el-button type="success" @click="toChoseGoods" style="margin-left: 10px;">添加商品</el-button><el-button type="danger" @click="editForm.goods = []">请空商品</el-button>
+                <el-scrollbar style="height: 420px;">
+                    <el-card v-for="(goods, i) in editForm.goods" class="goods-box" :key="goods.id">
+                        <img class="goods-img" :src="goods.title_img[0]"/>
+                        <div class="goods-info">
+                            <p class="goods-name">{{goods.name}}</p>
+                            <p class="goods-price"><span>{{goods.price}}</span>/份</p>
+                        </div>
+                        <div class="item-tool-box">
+                            <div class="item-tool">
+                                <el-button type="text" icon="el-icon-delete" @click.stop="delGoods(i)">删除</el-button>
+                            </div>
+                        </div>
+                    </el-card>
+                </el-scrollbar>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">退出</el-button>
+            <el-button type="primary" @click="submit">保存</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog :visible.sync="onChoseGoods" width="60%" title="选择参加商品">
+        <el-row>
+            <el-col :span="24">
+                <el-form :inline="true" :model="goodsChoseForm" size="mini">
+                    <el-form-item label="商品名称：">
+                        <el-input placeholder="商品名称" v-model="goodsChoseForm.name" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item label="商品类别：">
+                        <el-cascader  expand-trigger="hover" :options="categoryTree" v-model="goodsChoseForm.category" > </el-cascader>
+                    </el-form-item>
+                    <el-form-item label="商品价格：">
+                        <el-input placeholder="最低价格" v-model="goodsChoseForm.price[0]" clearable style="width: 100px"></el-input> -
+                        <el-input placeholder="最高价格" v-model="goodsChoseForm.price[1]" clearable style="width: 100px"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="getGoodsData()">查询</el-button>
+                        <el-button type="danger" @click="clearGoodsChoseForm()">清空</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+        <el-table :data="goodsTableData" style="width: 100%" v-loading="goodsDialogLoading" @selection-change="handleGoodsChange">
+            <el-table-column type="selection" width="50"></el-table-column>
+            <el-table-column prop="id" label="#" width="60"></el-table-column>
+            <el-table-column prop="name" label="商品名称" min-width="120" show-overflow-tooltip=""></el-table-column>
+            <el-table-column prop="category_name" label="商品分类" width="120">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.category_name}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="spec" label="规格" width="120"></el-table-column>
+            <el-table-column prop="price" label="单价" width="100">
+                <template slot-scope="scope">
+                    {{scope.row.price}}元
+                </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="60">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.status === 0">下架</span>
+                    <span v-if="scope.row.status === 1">上架</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" fixed="right" width="60">
+                <template slot-scope="scope">
+                    <el-button size="mini" type="text" @click="choseGoods(scope.row)">选择</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination background layout="total,prev, pager, next" :total="goodsTotalNum" :current-page.sync="goodsCurrentPage" @current-change="getGoodsData"></el-pagination>
+        <div slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="choseGoods(true)">确认选择</el-button>
+        </div>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    title: ''
+                },
+                editForm: {
+                    id : '',
+                    title: '',
+                    top_img: '',
+                    backgound_color: '#FFFFFF',
+                    list_show_type: 0,
+                    goods: []
+                },
+                dialogVisible: false,
+                dialogLoading: false,
+
+                listShowTypes: ['普通列表',' 双联列表','三联列表'],
+
+                // 选择商品
+                onChoseGoods: false,
+                goodsDialogLoading: false,
+                goodsTableData: [],
+                goodsTotalNum: 0,
+                goodsCurrentPage: 1,
+                goodsChoseForm: {
+                    category: [],
+                    price: ['',''],
+                    name: ''
+                },
+                categoryTree: JSON.parse('{$categoryTree}'),
+                goodsSelection: []
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    title: ''
+                };
+            },
+            toChoseGoods () {
+                this.onChoseGoods = true;
+                this.getGoodsData();
+            },
+            clearGoodsChoseForm () {
+                this.goodsChoseForm = {
+                    category: [],
+                    price: ['',''],
+                    name: ''
+                };
+            },
+            handleGoodsChange(val) {
+                this.goodsSelection = val;
+            },
+            choseGoods (row) {
+                if (row === true) {
+                    for (item of this.goodsSelection) {
+                        let repeat = false;
+                        for (goods of this.editForm.goods) {
+                            if (goods.id === item.id) {
+                                repeat = true;
+                                break;
+                            }
+                        }
+                        if (!repeat) {
+                            this.editForm.goods.push(JSON.parse(JSON.stringify(item)));
+                        }
+                        repeat = false;
+                    }
+                    this.$message.success('添加成功，重复的商品已经自动过滤');
+                } else {
+                    for (goods of this.editForm.goods) {
+                        if (goods.id === row.id) {
+                            this.$message.warning('该商品已经存在于列表');
+                            return;
+                        }
+                    }
+                    this.$message.success('添加成功');
+                    this.editForm.goods.push(JSON.parse(JSON.stringify(row)));
+                }
+                this.onChoseGoods = false;
+            },
+            delGoods (i) {
+                this.editForm.goods.splice(i, 1);
+            },
+            getGoodsData (page = 1) {
+                let params = {page: page};
+                this.goodsDialogLoading = true;
+                if (this.goodsChoseForm.category.length === 2){
+                    params.category = this.goodsChoseForm.category;
+                }
+                if (this.goodsChoseForm.price[0] !== '' || this.goodsChoseForm.price[1] !== ''){
+                    params.price = this.goodsChoseForm.price;
+                }
+                if (this.goodsChoseForm.name !== ''){
+                    params.name = this.goodsChoseForm.name;
+                }
+                axios.get('/admin/show/getGoods', {
+                    headers: this.headers,
+                    params: params
+                }).then((response) => {
+                    this.goodsDialogLoading = false;
+                    if (response.data.code === 1) {
+                        this.goodsTableData = response.data.data.data;
+                        this.goodsTotalNum = response.data.data.total;
+                        this.goodsCurrentPage = response.data.data.current_page;
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.goodsDialogLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            getData (page = 1) {
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.title !== ''){
+                    params.title = this.form.title;
+                }
+                axios.get('/admin/event/subject', {
+                    headers: this.headers,
+                    params: params
+                }).then((response) => {
+                    this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        this.tableData = response.data.data.data;
+                        this.totalNum = response.data.data.total;
+                        this.currentPage = response.data.data.current_page;
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.onDataLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            edit (row) {
+                if (row) {
+                    this.editForm = JSON.parse(JSON.stringify(row))
+                } else {
+                    this.editForm = {
+                        id : '',
+                        title: '',
+                        top_img: '',
+                        backgound_color: '#FFFFFF',
+                        list_show_type: 0,
+                        goods: []
+                    }
+                }
+                this.dialogVisible = true;
+            },
+            submit () {
+                let params = {
+                    title: this.editForm.title,
+                    top_img: this.editForm.top_img,
+                    backgound_color: this.editForm.backgound_color,
+                    list_show_type: this.editForm.list_show_type,
+                    goods: this.editForm.goods,
+                };
+                if (this.editForm.id !== '') {
+                    params.id = this.editForm.id
+                }
+                this.dialogLoading = true;
+                axios.post('/admin/event/subjectSubmit', params, {
+                    headers: this.headers
+                }).then((response) => {
+                    this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        if (this.editForm.id === '') {
+                            this.$message.success('新增完成');
+                        } else {
+                            this.$message.success('修改成功');
+                        }
+                        this.dialogVisible = false;
+                        this.getData();
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.dialogLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            del (id) {
+                this.$confirm('此操作将永久删除该专题，是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.onDataLoading = true;
+                    axios.post('/admin/event/subjectDel', {
+                        id: id
+                    }, {
+                        headers: this.headers
+                    }).then((response) => {
+                        this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            this.$message.success('删除成功');
+                            this.getData();
+                        } else {
+                            this.$message.warning(response.data.msg);
+                        }
+                    }).catch((error) => {
+                        this.onDataLoading = false;
+                        this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message.info('取消删除');
+                });
+            },
+            handleImgSuccess(res, file) {
+                if (res.code === 1) {
+                    this.editForm.top_img = res.data.url;
+                } else {
+                    this.$message.error(res.msg)
+                }
+            },
+        }
+    })
+</script>
+</html>

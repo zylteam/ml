@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>订单管理</title>
+    <link rel="stylesheet" href="src/style.css">
+    <link rel="stylesheet" href="src/iconfont.css">
+</head>
+<style>
+    .dataIpt input{
+        width: 47.5%;
+        line-height: 2.5rem;
+        border-radius: 1.25rem;
+        padding: 0 3%
+    }
+    .dataIpt input:first-child{
+        margin-right: 5%
+    }
+    .dataIpt2 p{
+        line-height: 2.5rem;
+        border-radius: 1.25rem;
+        background: #fff;
+        overflow: hidden;
+    }
+    .dataIpt2>p>span{
+        background: #fff028;
+        border-radius: 0  1.25rem  1.25rem 0;
+        line-height: 2.5rem;
+        padding: 0 1rem
+    }
+    .listBox img{
+        width: 4rem;
+        height: 4rem;
+    }
+</style>
+
+<body>
+    <div class="top flex text-c" id="headerTop">
+        <i class="iconfont icon-left" ></i>
+        <p class="flex_f1">结算记录</p>
+        <span  ></span>
+    </div>
+    <div class="m_l_r25 mt20  flex flex_fb dataIpt">
+        <input type="text"  placeholder="请选择开始日期">
+        <input type="text"  placeholder="请选择开始日期">
+    </div>
+
+    <div class="m_l_r25 mt20 mb25  flex dataIpt2">
+        <p class="flex flex_f1">
+            <i class="iconfont  ml20 mr1"></i> 
+            <input type="text" class="flex_f1 ml1"  placeholder="请输入订单编号">
+            <span class="">搜索</span>
+        </p>
+    </div>
+
+    <div class="m_l_r25 mt20 mb25  p_l_r15 bc_fff  p_t_b20 listBox">
+        <div class="flex mt10 fontsize24 lineheight1 mb20">
+            <p class="flex_f1 mr20 c_666 ">订单编号：2158930</p>
+            <span class="c_red2">未使用</span>
+        </div>
+        <div class="flex bordert1  mt10 pt10">
+            <img src="src/1.png" class="bor50 mr20" alt="">
+            <di class="flex_f1 ">
+                <div class="flex mt10">
+                    <p class="flex_f1 mr10 line1">订单编号</p>
+                    <span class="c_666">2019-08-03 12:20:20</span>
+                </div>
+                <div class="flex mt10 c_666">
+                    <p class="flex_f1 mr10  line1">炸鸡啤酒套餐炸鸡啤酒套炸鸡啤酒套餐炸鸡啤酒套...</p>
+                    <span class="">+￥99.99</span>
+                </div>
+            </di>
+        </div>
+      
+    </div>
+
+</body>
+
+</html>

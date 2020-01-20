@@ -1,0 +1,211 @@
+<include file="public@header_vue"/>
+</head>
+<body>
+<div id="app">
+<el-tabs type="border-card">
+    <el-tab-pane label="会员封禁记录" v-loading="onDataLoading">
+
+        <el-form :inline="true" :model="form" class="demo-form-inline" size="mini">
+
+            <el-form-item label="选择门店：">
+                <el-select v-model="form.choose_store" placeholder="请选择" style="width: 100px">
+                    <el-option v-for="(item, index) in store" :label="item.name" :value="item.id"></el-option>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="搜索条件：">
+                <el-select v-model="form.status" placeholder="请选择" style="width: 100px">
+                    <el-option label="会员姓名" :value="1">会员姓名</el-option>
+                    <el-option label="身份证号码" :value="2">身份证号码</el-option>
+                    <el-option label="手机号" :value="3">手机号</el-option>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="关键字：">
+                <el-input v-model="form.like" placeholder="请根据选择的搜索条件输入"></el-input>
+            </el-form-item>
+
+
+            <el-form-item label="时间：">
+                <el-date-picker v-model="form.date" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="timestamp" style="width: 220px"></el-date-picker>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="danger" @click="clearForm()">清空</el-button>
+                <el-button type="primary" @click="fetchData()">查询</el-button>
+            </el-form-item>
+        </el-form>
+
+
+        <el-table :data="tableData" style="width: 100%">
+             <el-table-column prop="id" label="ID" width="50"></el-table-column>
+            <el-table-column prop="name" label="会员姓名" width="120"></el-table-column>
+
+            <el-table-column prop="id_card" label="身份证号码" width="180"></el-table-column>
+
+            <el-table-column prop="mobile" label="手机号" width="140"></el-table-column>
+
+            <el-table-column prop="banned_status" label="设为状态" width="120">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.banned_status === 1">正常</span>
+                    <span v-else>禁用</span>
+                </template>
+            </el-table-column>
+
+            <el-table-column prop="admin" label="操作人" width="100"></el-table-column>
+
+            <el-table-column prop="store_name" label="操作门店" width="100">
+                <template slot-scope="scope">
+                <span v-if="scope.row.store_name === ''">总后台</span>
+                <span v-else>{{scope.row.store_name}}</span>
+                </template>
+            </el-table-column>
+
+            <el-table-column prop="add_time" label="时间" min-width="120"></el-table-column>
+            
+        </el-table>
+        <el-pagination background layout="prev, pager, next" :page-size="15" :total="totalNum" :current-page.sync="currentPage" @current-change="fetchData">
+        </el-pagination>
+
+
+
+
+    </el-tab-pane>
+    
+</el-tabs>
+</div>
+</body>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+.el-collapse {
+    margin-top: 10px;
+}
+.detil-item {
+    padding: 20px 0px;
+}
+.left-span {
+    width: 100px;
+}
+</style>
+<script>
+var app = new Vue({
+    el: '#app',
+    data: function() {
+        return {
+            tableData: [],
+            cate:[],
+            store:[],
+            onDataLoading: false,
+            totalNum: 0,
+            currentPage: 1,
+            form: {
+                like:'',
+                choose:'',
+                choose_store:'',
+                status:'',
+                spec_status:'',
+                date:'',
+            },
+            sum:0,
+        }
+    },
+    created () {
+      this.fetchData();//初始化
+    },
+    methods: {
+        clearForm () {
+            console.log(this.form);
+            this.form = {
+                like:'',
+                choose:'',
+                choose_store:'',
+                status:'',
+                spec_status:'',
+                date:'',
+            }
+        },
+
+        fetchData (page = 1) {
+            let _this = this;
+
+            let params = {page: page};
+
+            if(_this.form.like != ''){
+                params.like = this.form.like;
+            }
+
+            if(_this.form.choose != ''){
+                params.cate_id = this.form.choose;
+            }
+
+            if(_this.form.choose_store != ''){
+                params.store_id = this.form.choose_store;
+            }
+
+            if(_this.form.status != ''){
+                params.status = this.form.status;
+            }
+
+            if(_this.form.spec_status != ''){
+                params.spec_status = this.form.spec_status;
+            }
+
+            if(_this.form.date != ''){
+                params.date = this.form.date;
+            }
+
+            this.onDataLoading = true;
+            
+            axios.get('/admin/log/banned', {
+                 headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                params: params
+            }).then(function (response) {
+
+                _this.onDataLoading = false;
+
+                if (response.data.code === 1) {
+
+                   _this.tableData = response.data.data.list;
+                   _this.totalNum  = response.data.data.count;
+                    _this.cate     = response.data.data.cate;
+                    _this.store    = response.data.data.storeList;
+                    _this.sum      = response.data.data.sum;
+                } else {
+                   _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+            }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+
+        excel () {
+            let _this = this;
+            let like  = '';
+            let date  = '';
+
+            if(_this.form.like != ''){
+                like = this.form.like;
+            }
+
+            if(_this.form.date != ''){
+                date = this.form.date;
+            }
+
+            let params = {date:date };
+
+            window.location.href = '/admin/score/excel?like='+like+'&date='+date+'';
+
+        },
+  
+        
+    }
+})
+</script>
+</html>

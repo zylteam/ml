@@ -1,0 +1,106 @@
+<include file="public@header_vue"/>
+<!-- CDNJS :: Sortable (https://cdnjs.com/) -->
+<script src="//cdn.jsdelivr.net/npm/sortablejs@1.7.0/Sortable.min.js"></script>
+<!-- CDNJS :: Vue.Draggable (https://cdnjs.com/) -->
+<script src="//cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.15.0/vuedraggable.min.js"></script>
+<style>
+    .tips {
+        font-size: 12px;
+        margin-bottom: 20px;
+        padding-left: 6px;
+        line-height: 20px;
+    }
+</style>
+</head>
+<body>
+<div id="app">
+    <el-card v-loading="onDataLoading">
+        <div slot="header" class="clearfix">
+            <span>充值设置</span>
+        </div>
+        <div class="tips">
+            拖放可进行排序
+        </div>
+        <draggable v-model="rechargeSetting">
+            <el-form :inline="true" :model="item" size="mini" v-for="(item, i) in rechargeSetting" :key="i">
+                <el-form-item label="充">
+                    <el-input-number v-model="item.value" placeholder="充值金额"></el-input-number>
+                </el-form-item>
+                <el-form-item label="送">
+                    <el-input-number v-model="item.award" placeholder="赠送金额"></el-input-number>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="text" @click="add(i)">新增</el-button>
+                    <el-button type="text" @click="del(i)">删除</el-button>
+                </el-form-item>
+            </el-form>
+        </draggable>
+        <el-alert class="alert-title" title="" type="info" :closable="false">
+            <template slot="title">
+                <el-button type="primary" style="margin: 10px 0" @click="submit">保存</el-button>
+            </template>
+        </el-alert>
+    </el-card>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                rechargeSetting: JSON.parse('{$rechargeSetting}'),
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    num: '',
+                    type: ''
+                },
+                editForm: {},
+                dialogVisible: false,
+                dialogLoading: false,
+
+                type: ['普通会员充值卡', '企业福利卡', '尊贵会员福利卡']
+            }
+        },
+        created () {},
+        methods: {
+            add (index = 0) {
+                this.rechargeSetting.splice(index + 1, 0, {
+                    value: 0,
+                    award: 0
+                })
+            },
+            del (index = 0) {
+                if (this.rechargeSetting.length <= 1) {
+                    return this.$message.warning('至少需要保留一项');
+                }
+                this.rechargeSetting.splice(index, 1)
+            },
+            submit () {
+                let _this = this;
+                let params = {
+                    setting: this.rechargeSetting
+                };
+                this.dialogLoading = true;
+                axios.post('/admin/finance/rechargeSetting', params, {
+                    headers: _this.headers
+                }).then(function (response) {
+                    _this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        _this.$message.success('保存成功');
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.dialogLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            }
+        }
+    })
+</script>
+</html>

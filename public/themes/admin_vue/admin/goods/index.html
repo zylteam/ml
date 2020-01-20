@@ -1,0 +1,700 @@
+<include file="public@header_vue"/>
+<script src="//unpkg.com/wangeditor@3.1.1/release/wangEditor.min.js"></script>
+<style>
+.avatar-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.avatar-uploader .el-upload:hover {
+    border-color: #409EFF;
+}
+.photos {
+    width: 120px;
+    height: 120px;
+    border-radius: 6px;
+    overflow: hidden;
+    float: left;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    position: relative;
+}
+.photos-options {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 120px;
+    line-height: 120px;
+    width: 120px;
+    text-align: center;
+    background-color: rgba(0,0,0,0.6);
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.6s;
+}
+.photos:hover .photos-options {
+    opacity: 1;
+}
+.photos-options .el-button {
+    font-size: 24px;
+    color: white
+}
+.photos img {
+    width: 120px;
+    height: 120px;
+}
+.photos-uploader {
+    width: 120px;
+    height: 120px;
+    float: left;
+}
+.logo-uploader .el-upload {
+    border: 1px dashed #d9d9d9;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.logo-uploader .el-upload:hover {
+    border-color: #409EFF;
+}
+.logo-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+    width: 120px;
+    height: 120px;
+    line-height: 120px;
+    text-align: center;
+}
+.goods-img {
+    width: 20%;
+    border-radius: 4px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="商品列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col>
+                    <el-form :model="selectform" size="small" label-width="100px" @keyup.enter.native="getData">
+
+                        <el-form-item label="状态：">
+                            <el-radio-group v-model="selectform.status" @change="getData()">
+                                <el-radio-button :label="null">全部</el-radio-button>
+                                <el-radio-button :label="1">已上架</el-radio-button>
+                                <el-radio-button :label="0">已下架</el-radio-button>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="商品类别：">
+                            <el-cascader expand-trigger="hover" :options="categoryTree" v-model="selectform.category_id_path" @change="getData"> </el-cascader>
+                        </el-form-item>
+                        <el-form-item label="商品名称：">
+                            <el-input v-model="selectform.name" placeholder="商品名称" style="max-width: 215px;"></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData">查询</el-button>
+                            <el-button type="danger" @click="clearForm">清空</el-button>
+                            <el-button type="success" @click="edit(null)">新增</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="60"></el-table-column>
+
+                <el-table-column prop="name" label="商品名称" min-width="100" show-overflow-tooltip>
+                    <template  slot-scope="scope">
+                        {{scope.row.name}}
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="category_name" label="商品分类" min-width="50">
+                    <template slot-scope="scope">
+                        <el-tag type="success">{{scope.row.category_name}}</el-tag>
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="title_img" label="图片">
+                    <template slot-scope="scope">
+                        <img class="goods-img" :src="scope.row.title_img['0']">
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="price" label="原价" width="100">
+                </el-table-column>
+
+                <el-table-column prop="status" label="状态" width="80">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.status === 0">已下架</span>
+                        <span v-if="scope.row.status === 1">已上架</span>
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="stock" label="库存" width="100">
+                </el-table-column>
+
+                <el-table-column prop="add_time" label="添加时间" width="200">
+                </el-table-column>
+
+                <el-table-column label="操作" fixed="right" width="120">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="edit(scope.row)">编辑</el-button>
+                        <!--<el-button size="mini" type="text" @click="repertory(scope.row)">库存</el-button>-->
+                    </template>
+                </el-table-column>
+
+
+            </el-table>
+            <el-pagination background layout="total,prev, pager, next" :page-size="15" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <!--商品新增、编辑-->
+    <el-dialog  :title="form.id == '' ? '新增商品' : '修改商品'" :visible.sync="dialogStoreVisible" width="62%" v-loading.fullscreen="dialogLoading">
+        <el-form :model="form" class="demo-form-inline" :rules="rules" ref="form" label-width="90px">
+            <el-form-item label="商品名称" prop="name">
+                <el-col :span="20">
+                    <el-input  v-model="form.name" placeholder="商品名称"></el-input>
+                </el-col>
+            </el-form-item>
+
+            <el-form-item label="商品类别" prop="category_id_path">
+                <el-col :span="10">
+                    <el-cascader  expand-trigger="hover" :options="categoryTree" v-model="form.category_id_path" > </el-cascader>
+                </el-col>
+            </el-form-item>
+            <!--<el-form-item label="商品类别" prop="category_id_path">-->
+                <!--<el-col :span="10">-->
+                    <!--<el-cascader  expand-trigger="hover" :options="categoryTree" v-model="form.category_id_path" > </el-cascader>-->
+                <!--</el-col>-->
+            <!--</el-form-item>-->
+
+            <el-form-item label="商品原价" prop="price">
+                <el-col :span="20">
+                    <el-input-number v-model="form.price" :precision="2" :step="0.1" :min="0" :max="1000" ></el-input-number>
+                </el-col>
+            </el-form-item>
+
+            <el-form-item label="商品配图" >
+                <div v-for="photo in form.title_img" class="photos">
+                    <img :src="photo"/>
+                    <div class="photos-options">
+                        <el-button icon="el-icon-delete" type="text" @click="handleRemove(photo)"></el-button>
+                    </div>
+                </div>
+                <el-upload class="photos-uploader logo-uploader" action="/admin/goods/goodsImgUploader" :headers="headers" :show-file-list="false" :on-success="handleintroimgSuccess" multiple>
+                    <i class="el-icon-plus logo-uploader-icon"></i>
+                </el-upload>
+                <div class="el-form-item__error">
+                    图片宽高比例必须为 1:1，建议分辨率 750*750px 以上
+                </div>
+            </el-form-item>
+
+            <template v-for="(item, index) in form.dynamicValidateForm.list">
+                <el-form-item :label="'*规格' + (index+1)" style="margin-top: 20px;">
+                    <el-col :span="12">
+                        <el-input placeholder="请填写商品规格" v-model="item.spec"></el-input>
+                    </el-col>
+                    <span style="float:left;margin-left: 10px;">当前库存：{{item.num}}</span>
+                </el-form-item>
+
+                <el-form-item :label="'*价格'+ (index+1)">
+
+                    <el-col :span="12">
+                        <el-input placeholder="请填写价格" v-model="item.price"></el-input>
+                    </el-col>
+
+                    <el-button @click.prevent="removeDomain(item)" size="mini" style="float:left;margin-top: 10px;margin-left: 10px;">删除</el-button>
+
+                </el-form-item>
+            </template>
+
+            <i class="el-icon-circle-plus-outline" style="margin-left: 55px;"></i>
+            <el-button @click="addDomain()">新增一组规格</el-button>
+
+            <el-form-item label="状态" >
+                <el-col :span="10">
+                    <template>
+                        <el-radio-group v-model="form.status">
+                            <el-radio :label="1">上架</el-radio>
+                            <el-radio :label="0">下架</el-radio>
+                        </el-radio-group>
+                    </template>
+                </el-col>
+            </el-form-item>
+
+            <el-form-item>
+                <el-col :span="24">
+                    <el-alert :closable="false"  title="注：商品详细中的图片尺寸像素建议宽度为750px，高度不做限制"  type="warning"> </el-alert>
+                </el-col>
+            </el-form-item>
+
+            <el-form-item label="商品详细">
+                <el-col :span="24">
+                    <div ref="editor" style="text-align:left"></div>
+                </el-col>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button  type="primary" @click="submit('form')" v-if="form.id == ''">新增</el-button>
+            <el-button  type="primary" @click="submit('form')" v-else>修改</el-button>
+        </span>
+    </el-dialog>
+    <!--为本店修改库存-->
+    <el-dialog title="设置库存" :visible.sync="dialogkucunVisible" v-loading.fullscreen="dialogLoading">
+        <el-form :model="kucunform" class="demo-form-inline" ref="kucunform" label-width="90px">
+            <el-form-item label="当前">
+                <el-input-number v-model="kucunform.number" :disabled="true"></el-input-number>
+            </el-form-item>
+            <el-form-item label="操作数量">
+                <el-input-number v-model="kucunform.addnumber" @change="handleChange" :min="1" :max="1000" label="数量"></el-input-number>
+            </el-form-item>
+            <el-form-item label="操作类型">
+                <el-radio-group v-model="kucunform.type">
+                    <el-radio :label="1">增加</el-radio>
+                    <el-radio :label="2">减少</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="备注说明">
+                <el-input type="textarea" :rows="3" placeholder="请输入内容" v-model="kucunform.mark"></el-input>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button  type="primary" @click="submitkucun('kucunform')">编辑</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog title="库存日志" :visible.sync="dialogkucunlogVisible" v-loading.fullscreen="dialogLoading">
+        <el-table :data="kucunData">
+            <el-table-column prop="type" label="类型" width="60">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.type === 1">增加</span>
+                    <span v-if="scope.row.type === 2">减少</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="change_number" label="变更数量" min-width="80">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.type === 1">+{{scope.row.change_number}}</span>
+                    <span v-if="scope.row.type === 2">-{{scope.row.change_number}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="mark" label="备注" min-width="200" show-overflow-tooltip>
+                <template slot-scope="scope">
+                    {{!scope.row.mark && scope.row.type === 2 ? '出售' : scope.row.mark}}
+                </template>
+            </el-table-column>
+            <el-table-column prop="add_time" label="时间" min-width="160">
+                <template slot-scope="scope">
+                    {{formatDate(scope.row.add_time)}}
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var E = window.wangEditor;
+
+var app = new Vue({
+    el: '#app',
+    data: function() {
+        return {
+            editor: null,
+            tableData: [],
+            categoryTree: [],
+            kucunData: [],
+            stores: [],
+            selectform: {
+                name: '',
+                category_id_path: [],
+                status: null
+            },
+            kucunform: {
+                goods_id: '',
+                number: '',
+                addnumber: '',
+                type: 1,
+                mark: ''
+            },
+            oldnumber: 0,
+            form:{
+                id: '',
+                name: '',
+                category_id_path: [],
+                price: '',
+                discount: '',
+                original_price: '',
+                details: '',
+                status: 1,
+                title_img: [],
+                details_img: [],
+                introduction: '',
+                dynamicValidateForm: {
+                    list: [{
+                        spec:'',
+                        price:"",
+                        num:0
+                    }],
+                    count: ''
+                },
+            },
+            onDataLoading: false,
+            dialogLoading: false,
+            dialogStoreVisible: false,
+            dialogkucunVisible: false,
+            dialogkucunlogVisible: false,
+            totalNum: 0,
+            currentPage: 1,
+            rules: {
+                name: [{ required: true, message: '请输入商品名称', trigger: 'blur' },{ min: 3, max: 32, message: '长度在 3 到 32 个字符', trigger: 'blur' }],
+                category_id_path: [{required: true, message: '请选择商品分类', trigger: 'change' }],
+                unit: [{ required: true, message: '请填写计量单位', trigger: 'change' }],
+                spec: [{ required: true, message: '请输入规格', trigger: 'change' }],
+                price: [{ required: true, message: '请输入价格', trigger: 'change' }],
+            },
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+        }
+    },
+    created () {
+        this.getcategoryTree();//初始化
+        this.getData();//初始化
+
+    },
+    methods : {
+
+        addDomain () {
+            this.form.dynamicValidateForm.list.push({
+                spec: '',
+                price:"",
+            });
+        },
+
+        removeDomain(item) {
+            var index = this.form.dynamicValidateForm.list.indexOf(item);
+            if (index !== -1) {
+                this.form.dynamicValidateForm.list.splice(index, 1);
+            }
+        },
+
+
+        getstore(){
+            axios.get('/admin/goods/getstorelist', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            }).then((response) => {
+                this.dialogLoading = false;
+                this.stores = response.data;
+            }).catch((error) => {
+                this.onDataLoading = false;
+                this.$message.error(error.toString())
+            })
+
+        },
+
+        clearForm () {
+            this.selectform = {
+                name: '',
+                category_id_path: [],
+                status: null
+            }
+        },
+
+        //商品分类
+        getcategoryTree () {
+            axios.get('/admin/Goods/tree', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            }).then((response) => {
+                this.categoryTree = response.data;
+                console.log(this.categoryTree);
+            }).catch((error) => {
+                this.onDataLoading = false;
+                this.$message.error(error.toString())
+            })
+        },
+        showkucun(row){
+            let params = {
+                goods_id: row['id'],
+                store_id: this.selectform.store_id
+            };
+            this.dialogkucunlogVisible = true;
+            this.dialogLoading = true;
+            axios.get('/admin/goods/getgoods_kucun', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then((response) => {
+                this.onDataLoading = false;
+                this.dialogLoading = false;
+                if (response.data.code === 1) {
+                    this.kucunData = response.data.data.list;
+                } else {
+                    this.$message.warning(response.data.msg);
+                }
+            }).catch((error) => {
+                this.onDataLoading = false;
+                this.$message.error(error.toString())
+            })
+        },
+        //首页获取列表数据
+        getData (page = 1) {
+
+            let params = {page: page};
+
+            if (this.selectform.name !== ''){
+                params.name = this.selectform.name;
+            }
+            if (this.selectform.category_id_path !== '') {
+                params.category_id_path = this.selectform.category_id_path;
+            }
+            if (this.selectform.status !== null){
+                params.status = this.selectform.status;
+            }
+            this.onDataLoading = true;
+            axios.get('/admin/goods/index', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then((response) => {
+                this.onDataLoading = false;
+                if (response.data.code === 1) {
+
+                    console.log(response.data.data.list);
+
+                    this.tableData = response.data.data.list;
+                    this.totalNum = response.data.data.count;
+                    this.currentPage = response.data.data.page;
+                } else {
+                    this.$message.warning(response.data.msg);
+                }
+            }).catch((error) => {
+                this.onDataLoading = false;
+                this.$message.error(error.toString())
+            })
+        },
+        editPrice (row) {
+            if (!row) {
+                return false;
+            }
+            let data = JSON.parse(JSON.stringify(row));
+            data.editPrice = true;
+            this.form = data;
+            this.$nextTick(_ => {
+                document.getElementById(`priceEditor${row.id}`).focus();
+            });
+        },
+        priceSubmit (row) {
+            if (parseFloat(row.price) === parseFloat(this.form.price)) {
+                this.form.editPrice = false;
+                return false;
+            }
+            this.onDataLoading = true;
+            axios.post('/admin/Goods/goodsSubmit', this.form, {
+                headers: this.headers
+            }).then((response) => {
+                this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    this.$message.success('修改成功');
+                    this.form.editPrice = false;
+                    for (let row of this.tableData) {
+                        if (row.id === this.form.id) {
+                            row.price = parseFloat(this.form.price).toFixed(2);
+                        }
+                    }
+                } else {
+                    this.$message.warning(response.data.msg);
+                }
+            }).catch((error) => {
+                this.onDataLoading = false;
+                this.$message.error(error.toString())
+            })
+        },
+        edit (row) {
+            this.dialogLoading = true;
+            if (row) {
+                this.dialogLoading = false;
+                this.form = JSON.parse(JSON.stringify(row));//深拷贝
+                let dataIntArr=[];//保存转换后的整型字符串
+                //方法一
+                row.category_id_path.forEach(function(data,index,arr){
+                    dataIntArr.push(+data);
+                });
+
+                this.form.category_id_path = dataIntArr;
+
+                console.log(row);
+
+                console.log(this.form.dynamicValidateForm.list);
+
+            } else {
+                this.form = {
+                    id:'',
+                    name:'',
+                    category_id_path:[],
+                    price:'',
+                    status:1,
+                    title_img:[],
+                    introduction: '',
+                    dynamicValidateForm: {
+                        list: [{
+                            spec:'',
+                            price:"",
+                            num:0
+                        }],
+                    },
+                };
+                this.dialogLoading = false;
+            }
+            this.dialogStoreVisible = true;
+            // 编辑器逻辑，第一次打开时初始化编辑器,其他时候根据情况初始化内容或插入已有内容
+
+            if (this.editor == null) {
+                let _this = this;
+                setTimeout(function () {
+                    console.log(_this.$refs);
+                    _this.editor = new E(_this.$refs.editor);
+                    _this.editor.customConfig.uploadImgServer = '/admin/editor/photoUpload';
+                    _this.editor.customConfig.uploadFileName = 'file';
+                    _this.editor.customConfig.uploadImgMaxLength = 1;
+                    _this.editor.customConfig.onchange = (html) => {
+                        _this.form.introduction = html
+                    };
+                    _this.editor.create();
+                    _this.editor.txt.html(_this.form.introduction);
+                }, 1000);
+            } else {
+                this.editor.txt.clear();
+                this.editor.txt.html(this.form.introduction);
+            }
+
+        },
+        //数据提交
+        submit (form) {
+            this.dialogLoading = true;
+            this.$refs[form].validate((valid) => {
+                if (valid) {
+                    console.log(this.form);
+                    axios.post('/admin/Goods/goodsSubmit', this.form, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    }).then((response) => {
+                        this.dialogLoading = false;
+                        if (response.data.code === 1) {
+                            if (this.form.id === '') {
+                                this.$message.success('新增完成');
+                            } else {
+                                this.$message.success('修改成功');
+                            }
+                            this.dialogStoreVisible = false;
+                            this.getData(this.currentPage);
+                        } else {
+                            this.$message.warning(response.data.msg);
+                        }
+                    }).catch((error) => {
+                        this.dialogLoading = false;
+                        this.$message.error(error.toString())
+                    })
+                } else {
+                    this.dialogLoading = false;
+                    return false;
+                }
+            });
+        },
+        repertory(row){
+            this.dialogkucunVisible = true;
+            this.kucunform.goods_id = row.id;
+            this.kucunform.addnumber = 0;
+            this.dialogLoading = true;
+            let params = {goods_id: row.id};
+
+            axios.get('/admin/goods/getstorekucun', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then((response) => {
+                if (response.data.number){
+                    this.kucunform.number = response.data.number;
+                    this.oldnumber = response.data.number;
+                }else {
+                    this.kucunform.number = 0;
+                    this.oldnumber = 0;
+                }
+                this.dialogLoading = false;
+            }).catch((error) => {
+                this.onDataLoading = false;
+                this.$message.error(error.toString())
+            })
+        },
+        handleChange(value) {
+            this.kucunform.number = this.oldnumber + value;
+        },
+        submitkucun(kucunform){
+            let params = {
+                goods_id: this.kucunform.goods_id,
+                number: this.kucunform.addnumber,
+                type: this.kucunform.type,
+                mark: this.kucunform.mark
+            };
+            axios.post('/admin/Goods/kucunSubmit', params, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            }).then((response) => {
+                this.dialogLoading = false;
+                if (response.data.code === 1) {
+                    this.$message.success('设置成功');
+                    this.dialogkucunVisible = false;
+                    this.getData(this.currentPage);
+                } else {
+                    this.$message.warning(response.data.msg);
+                }
+            }).catch(function (error) {
+                this.dialogLoading = false;
+                this.$message.error(error.toString())
+            })
+        },
+        //商品图片
+        handleintroimgSuccess(res, file){
+            if (res.code === 1) {
+                this.form.title_img.push(res.data.url);
+            } else {
+                this.$message.error(res.msg)
+            }
+        },
+        handleRemove(url) {
+            let index = this.form.title_img.indexOf(url);
+            this.form.title_img.splice(index, 1);
+        },
+        //详情图片
+        handleintroimgSuccessDetails(res, file){
+            if (res.code === 1) {
+                this.form.details_img.push(res.data.url);
+            } else {
+                this.$message.error(res.msg)
+            }
+        },
+        handleRemoveDetails(url) {
+            let index = this.form.details_img.indexOf(url);
+            this.form.details_img.splice(index, 1);
+        },
+        formatDate(timestamp) {
+            let date = new Date(timestamp * 1000);
+            return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+        },
+        prefix(num) {
+            if (num < 10) {
+                return '0' + num;
+            }
+            return num;
+        }
+    }
+});
+</script>

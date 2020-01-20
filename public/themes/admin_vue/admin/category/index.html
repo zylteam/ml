@@ -1,0 +1,241 @@
+<include file="public@header_vue"/>
+<style>
+    .custom-tree-node {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+        padding-right: 8px;
+    }
+
+    .avatar-uploader .el-upload {
+        border: 1px dashed #d9d9d9;
+        border-radius: 6px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .avatar-uploader .el-upload:hover {
+        border-color: #409EFF;
+    }
+
+    .avatar-uploader-icon {
+        font-size: 28px;
+        color: #8c939d;
+        width: 80px;
+        height: 80px;
+        line-height: 80px;
+        text-align: center;
+    }
+
+    .avatar {
+        width: 80px;
+        height: 80px;
+        display: block;
+    }
+
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="标签列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="20">
+                    <el-form :inline="true" :model="form" class="demo-form-inline" size="mini">
+                        <el-form-item label="关键词：">
+                            <el-select v-model="form.category_id" placeholder="选择标签类型">
+                                <el-option v-for="type in type_list " :key="type.id" :label="type.name"
+                                           :value="type.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+<!--                <el-col :span="4" style="text-align: right">-->
+<!--                    <el-button type="primary" size="mini" @click="edit(null)">新增</el-button>-->
+<!--                </el-col>-->
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+				<el-table-column prop="sort" label="排序" width="80">
+					<template slot-scope="scope">
+						<el-input v-model="scope.row.sort"
+								  @change="change_status('sort',scope.row.sort,scope.row.id)"></el-input>
+					</template>
+				</el-table-column>
+                <el-table-column prop="name" label="标签名称">
+					<template slot-scope="scope">
+						<el-input v-model="scope.row.name"
+								  @change="change_status('name',scope.row.name,scope.row.id)"></el-input>
+					</template>
+				</el-table-column>
+                <el-table-column prop="type" label="标签类别">
+                    <template slot-scope="scope">
+                        {{ type_list[scope.row.type-1].name}}
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" fixed="right" width="180">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="delete_category(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="total,prev, pager, next" :total="totalNum" :page-size="15"
+                           :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+</div>
+</body>
+<style>
+    .el-pagination {
+        margin-top: 20px;
+    }
+
+    .el-collapse {
+        margin-top: 10px;
+    }
+
+    .detil-item {
+        padding: 20px 0px;
+    }
+
+    .left-span {
+        width: 100px;
+    }
+</style>
+<script>
+
+
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                type_list: [
+                    {id: 1, name: '分类标签'},
+                    {id: 2, name: '属性标签'},
+                    {id: 3, name: '人数'},
+                    {id: 4, name: '菜系'},
+                ],
+                form: {
+                    category_id: ''
+                },
+                onDataLoading: false,
+                tableData: [],
+                currentPage: 1,
+                totalNum: 0,
+            }
+        },
+        created() {
+            let _this = this;
+            this.getData();
+        },
+        methods: {
+            getData(page = 1) {
+                let _this = this;
+                this.onDataLoading = true;
+                let params = {category_id: _this.category_id, page: page};
+                if (_this.form.category_id != '') {
+                    params.category_id = _this.form.category_id;
+                }
+                axios.get('/admin/category/index', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.list;
+                        _this.totalNum = response.data.data.count;
+                    } else {
+                        _this.$message({
+                            message: response.data.msg,
+                            type: 'warning'
+                        });
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+			change_status(field, value, id) {
+				let _this = this;
+				this.dialogLoading = true;
+				let params = {field: field, value: value, id: id};
+				axios.post("{:url('admin/category/change_status')}", params, {
+					headers: {
+						'X-Requested-With': 'XMLHttpRequest',
+					}
+				}).then(function (response) {
+					_this.dialogLoading = false;
+					if (response.data.code === 1) {
+						_this.$message.success('修改完成');
+						_this.getData(_this.currentPage);
+					} else {
+						_this.$message.warning(response.data.msg);
+					}
+				})
+			},
+			delete_category(id){
+				let _this = this;
+				_this.dialogLoading = true;
+				if (id) {
+					let params = {id: id};
+					axios.post('/admin/category/delete', params, {
+						headers: {
+							'X-Requested-With': 'XMLHttpRequest',
+						}
+					}).then(function (response) {
+						_this.dialogLoading = false;
+						if (response.data.code === 1) {
+							_this.$message.success('删除完成');
+							_this.getData(_this.currentPage);
+						} else {
+							_this.$message.warning(response.data.msg);
+						}
+					}).catch(function (error) {
+						_this.dialogLoading = false;
+						_this.$message.error(error.toString())
+					})
+				}
+			},
+            handleAvatarSuccess(res, file) {
+                let _this = this;
+                if (res.code === 1) {
+                    // this.appendForm.img = '/upload/' + res.data.filepath;res.data.url
+                    this.appendForm.img = res.data.url
+                    console.log(this.appendForm);
+                } else {
+                    _this.$message.error(res.msg)
+                }
+            },
+
+            formatDateFull(timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDay());
+            },
+            formatDateAll(timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDay()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+            },
+            formatDate(timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1);
+            },
+            prefix(num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+
+
+</script>
+</html>

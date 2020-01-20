@@ -1,0 +1,229 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="提现管理" v-loading="onDataLoading" style="min-height: 400px;">
+            <el-row>
+                <el-col :span="24">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="搜索:">
+                            <el-input v-model="form.like" placeholder="手机号/昵称" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-date-picker v-model="form.date_range" type="daterange" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="pickerOptions2"></el-date-picker>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="80"></el-table-column>
+                <el-table-column prop="user_nickname" label="合伙人昵称" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="mobile" label="合伙人手机号" min-width="120"></el-table-column>
+                <el-table-column prop="total" label="提现金额" min-width="100" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        ￥{{scope.row.total / 100}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="parent_mobile" label="提现渠道" min-width="60">
+                    <template slot-scope="scope">
+                        微信
+                    </template>
+                </el-table-column>
+                <el-table-column prop="payment_time" label="完成时间" width="160">
+                    <template slot-scope="scope">
+                        {{scope.row.payment_time ? formatDate(scope.row.payment_time) : '尚未完成'}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="create_time" label="申请时间" width="160">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.create_time)}}
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="80" fixed="right">
+                    <template slot-scope="scope">
+                        <el-button type="text" :disabled="scope.row.status !== 2" @click="audit(scope.row)">审核</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading" title="提现审核">
+        <el-form :model="editForm" label-width="100px">
+            <el-form-item label="提现金额:">
+                ￥<span style="color: red;">{{editForm.total / 100}}</span>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="warning" @click="doAudit(0)">不通过</el-button>
+            <el-button type="primary" @click="doAudit(1)">通过</el-button>
+        </span>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    like: '',
+                    date_range: []
+                },
+                pickerOptions2: {
+                    onPick (date) {
+                        if (date.maxDate) {
+                            date.maxDate.setTime(date.maxDate.getTime() + 86400000 - 1000);
+                        }
+                    },
+                    shortcuts: [{
+                        text: '最近七天',
+                        onClick(picker) {
+                            const end = new Date();
+                            let start = new Date();
+                            start = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+                            end.setTime(start.getTime() + 3600 * 1000 * 24 * 8 - 1000);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '本月',
+                        onClick(picker) {
+                            const start = new Date();
+                            start.setTime(new Date(`${start.getFullYear()}-${start.getMonth() + 1}`));
+                            let year = start.getFullYear();
+                            let month = start.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            let end = new Date(`${year}-${month}`);
+                            end.setTime(end.getTime() - 1000);
+
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            let year = end.getFullYear();
+                            let month = end.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            end.setTime(new Date(`${year}-${month}`).getTime() - 1000);
+
+                            let startYear = end.getFullYear();
+                            let startMonth = end.getMonth() - 1;
+                            if (startMonth <= 0) {
+                                startMonth += 12;
+                                startYear--;
+                            }
+                            let start = new Date(`${startYear}-${startMonth}`);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
+
+                dialogVisible: false,
+                dialogLoading: false,
+                editForm: {}
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    like: '',
+                    date_range: []
+                };
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.like !== ''){
+                    params.like = this.form.like;
+                }
+                if (this.form.date_range.length === 2){
+                    params.date_range = [
+                        this.form.date_range[0] / 1000,
+                        this.form.date_range[1] / 1000
+                    ];
+                }
+                axios.get('/admin/Partner/withdrawal', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            audit (row) {
+                this.editForm = JSON.parse(JSON.stringify(row));
+                this.dialogVisible = true;
+            },
+            doAudit (type) {
+                let params = {
+                    id: this.editForm.id,
+                    type: type
+                };
+                this.dialogLoading = true;
+                axios.post('/admin/Partner/withdrawalAudit', params, {
+                    headers: this.headers
+                }).then((response) => {
+                    this.dialogLoading = false;
+                    if (response.data.code === 1) {
+                        this.$message.success('保存成功');
+                        this.dialogVisible = false;
+                        this.getData();
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.dialogLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return `${date.getFullYear()}-${this.prefix(date.getMonth() + 1)}-${this.prefix(date.getDate())} ${this.prefix(date.getHours())}:${this.prefix(date.getMinutes())}:${this.prefix(date.getSeconds())}`;
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

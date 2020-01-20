@@ -1,0 +1,463 @@
+<include file="public@header_vue"/>
+<style>
+    .el-pagination {
+        margin-top: 20px;
+    }
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="订单管理" v-loading="onDataLoading" style="min-height: 400px;">
+            <el-row>
+                <el-col :span="24">
+                    <!--                    <el-button type="primary" plain size="mini" style="float:right;margin-right: 20px;"-->
+                    <!--                               @click="excel_goods()">导出商品-->
+                    <!--                    </el-button>-->
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="用户ID:">
+                            <el-input v-model="form.uid" placeholder="用户ID" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="店铺名称:">
+                            <el-select v-model="form.store_id" placeholder="请选择店铺">
+                                <el-option v-for="item in shopList" :key="item.id" :label="item.store_name"
+                                           :value="item.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="日期:">
+                            <el-date-picker v-model="form.duration" type="daterange" value-format="yyyy-MM-dd"
+                                            :picker-options="durationOptions" range-separator="至"
+                                            start-placeholder="开始日期" end-placeholder="结束日期" clearable></el-date-picker>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="order_sn" label="订单号" width="200" fixed="left"></el-table-column>
+                <el-table-column prop="create_time" label="订单发起时间" width="165">
+                </el-table-column>
+                <el-table-column prop="user_info.user_nickname" label="用户昵称" width="120"></el-table-column>
+                <el-table-column prop="store_info.store_name" label="店铺" width="160"
+                                 show-overflow-tooltip></el-table-column>
+                <el-table-column prop="product.product_name" label="团品" width="160"
+                                 show-overflow-tooltip></el-table-column>
+                <el-table-column prop="coupon.name" label="优惠券名称" width="160"
+                                 show-overflow-tooltip></el-table-column>
+                <el-table-column prop="status" label="订单状态" width="200"
+                                 show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        {{ scope.row.order_status}}-{{scope.row.pay_status}}-{{scope.row.use_status}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="order_amount" label="订单金额" width="100"></el-table-column>
+                <el-table-column prop="pay_amount" label="应付金额" width="100"></el-table-column>
+                <el-table-column prop="discount_amount" label="优惠金额" width="100"></el-table-column>
+                <el-table-column prop="money_paid" label="实付金额" width="100"></el-table-column>
+                <el-table-column label="操作" fixed="right" width="240">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="showDetail(scope.row)">详细信息</el-button>
+                        <!--                        <el-button size="mini" type="text" @click="discount(scope.row)">优惠情况</el-button>-->
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage"
+                           @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="addressDialogVisible" width="60%" title="订单信息">
+        <el-tabs>
+            <el-tab-pane label="订单信息">
+                <el-form :model="orderDetail" label-width="100px">
+                    <el-form-item label="订单号:">
+                        {{orderDetail.order_sn}}
+                    </el-form-item>
+                    <el-form-item label="用户昵称:">
+                        {{orderDetail.user_info.user_nickname}}
+                    </el-form-item>
+                    <el-form-item label="手机号码:">
+                        {{orderDetail.user_info.mobile}}
+                    </el-form-item>
+                    <el-form-item label="订单号:">
+                        {{orderDetail.order_sn}}
+                    </el-form-item>
+                    <el-form-item label="下单时间:">
+                        {{orderDetail.create_time}}
+                    </el-form-item>
+                    <el-form-item label="支付时间:">
+                        {{orderDetail.pay_time}}
+                    </el-form-item>
+                    <el-form-item label="使用时间:">
+                        {{orderDetail.use_time}}
+                    </el-form-item>
+                    <el-form-item label="订单状态:">
+                        {{orderDetail.order_status}}-{{orderDetail.pay_status}}-{{orderDetail.use_status}}
+                    </el-form-item>
+                    <el-form-item label="订单金额">
+                        {{orderDetail.order_amount}}
+                    </el-form-item>
+                    <el-form-item label="优惠金额">
+                        {{orderDetail.coupon.value2}}
+                    </el-form-item>
+                    <el-form-item label="实付金额">
+                        {{orderDetail.pay_amount}}
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane label="团品信息">
+                <el-form :model="orderDetail" label-width="100px">
+                    <el-form-item label="团品名称:">
+                        {{orderDetail.product.product_name}}
+                    </el-form-item>
+                    <el-form-item label="团品原价:">
+                        {{orderDetail.product.price}}
+                    </el-form-item>
+                    <el-form-item label="团品售价:">
+                        {{orderDetail.product.sale_price}}
+                    </el-form-item>
+                    <el-form-item label="服务费:">
+                        {{orderDetail.product.service_price}}
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane label="优惠券信息">
+                <el-form :model="orderDetail" label-width="100px">
+                    <el-form-item label="优惠券名称:">
+                        {{orderDetail.coupon.name}}
+                    </el-form-item>
+                    <el-form-item label="消费金额:">
+                        {{orderDetail.coupon.value1}}
+                    </el-form-item>
+                    <el-form-item label="优惠金额:">
+                        {{orderDetail.coupon.value2}}
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+        </el-tabs>
+    </el-dialog>
+    <el-dialog :visible.sync="discountDialogVisible" width="60%" title="优惠情况">
+        <el-form :model="discountForm" label-width="100px">
+            <el-form-item label="商品原价:">
+                {{discountForm.original_total}}
+            </el-form-item>
+            <el-form-item label="优惠抵扣:">
+                <template v-if="discountForm.activity_discount">
+                    {{discountForm.activity_discount}}
+                </template>
+                <template v-else>
+                    无
+                </template>
+            </el-form-item>
+            <el-form-item label="优惠券抵扣:">
+                <template v-if="discountForm.coupon_discount">
+                    {{discountForm.coupon_discount}}
+                </template>
+                <template v-else>
+                    无
+                </template>
+            </el-form-item>
+            <el-form-item label="配送费:">
+                <template v-if="discountForm.delivery_price">
+                    {{discountForm.delivery_price}}
+                </template>
+                <template v-else>
+                    无
+                </template>
+            </el-form-item>
+            <el-form-item label="订单金额:">
+                {{discountForm.total}}
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+    <el-dialog :visible.sync="goodsDialogVisible" width="60%" title="商品信息导出">
+        <el-row>
+            <el-col :span="24">
+                <el-form :inline="true" :model="ruleForm" :rules="rules" ref="ruleForm" size="mini">
+                    <el-form-item label="日期:" prop="date">
+                        <el-date-picker v-model="ruleForm.date" type="daterange" value-format="timestamp"
+                                        range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
+                                        clearable></el-date-picker>
+                    </el-form-item>
+
+                    <el-form-item>
+                        <el-button type="primary" @click="daoChu('ruleForm')">确认导出</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+    </el-dialog>
+    <el-dialog :visible.sync="doDeperate" width="60%" title="分单" v-loading="onDeperate">
+        <el-form :inline="true" :model="seperateForm" size="mini">
+            <el-form-item label="分单数量" prop="date">
+                <el-select v-model="seperateForm.num" placeholder="请选择">
+                    <el-option :label="2" :value="2"></el-option>
+                    <el-option :label="3" :value="3"></el-option>
+                    <el-option :label="4" :value="4"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="doSeperate">确认分单</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                shopList: {$store_list},
+                shopName: '{$shopName}',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    uid: '',
+                    store_id: '',
+                    duration: null,
+                    type: null
+                },
+                ruleForm: {
+                    date: '',
+                },
+                rules: {
+                    date: [
+                        {required: true, message: '请选择时间', trigger: 'change'}
+                    ],
+                },
+                durationOptions: {
+                    shortcuts: [{
+                        text: '一周',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 7);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '一个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 30);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            end.setTime(end.getTime() + 3600 * 1000 * 24 * 90);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
+                orderDetail: {
+                    product: {
+                        product_name: '',
+                    },
+                    coupon: {
+                        value2: ''
+                    },
+                    user_info: {}
+                },
+                addressDialogVisible: false,
+                discountForm: {},
+                discountDialogVisible: false,
+                goodsDialogVisible: false,
+                doDeperate: false,
+                onDeperate: false,
+                seperateForm: {
+                    id: '',
+                    num: 2
+                }
+            }
+        },
+        created() {
+            this.getData();
+        },
+        methods: {
+            clearForm() {
+                this.form = {
+                    uid: '',
+                    mobile: '',
+                    duration: null,
+                    store_id: null,
+                    map_id: '',
+                    type: null
+                };
+            },
+            print(order_id) {
+                this.$confirm('确认打印订单吗', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    let params = {order_id: order_id};
+                    axios.get('/admin/order/print_order', {
+                        headers: this.headers,
+                        params: params
+                    }).then((response) => {
+                        console.log(response);
+                        if (response.data.code === 1) {
+                            this.$message.success('已成功打印');
+                        } else {
+                            this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消打印'
+                    });
+                });
+            },
+            getData(page = 1) {
+                let params = {page: page};
+                console.log(params)
+                let _this = this;
+                _this.onDataLoading = true;
+                if (_this.form.store_id) {
+                    params.store_id = _this.form.store_id;
+                }
+                if (_this.form.duration) {
+                    params.duration = [
+                        _this.form.duration[0] + ' 00:00:00',
+                        _this.form.duration[1] + ' 23:59:59'
+                    ]
+                }
+                axios.get("{:url('admin/order/order_list')}", {
+                    headers: _this.headers,
+                    params: params
+                }).then((response) => {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.list.data;
+                        _this.totalNum = response.data.data.list.total;
+                        _this.currentPage = response.data.data.list.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            done(id) {
+                this.$confirm('确定确认收货吗', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    let params = {order_id: id};
+                    axios.get('/admin/order/done', {
+                        headers: this.headers,
+                        params: params
+                    }).then((response) => {
+                        this.onDataLoading = false;
+                        if (response.data.code === 1) {
+                            this.getData(this.currentPage);
+                        } else {
+                            this.$message.warning(response.data.msg);
+                        }
+                    }).catch((error) => {
+                        this.onDataLoading = false;
+                        this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消打印'
+                    });
+                });
+            },
+            showDetail(row) {
+                console.log(row)
+                this.orderDetail = row;
+                this.addressDialogVisible = true;
+            },
+            discount(row) {
+                this.discountForm = row;
+                this.discountDialogVisible = true;
+            },
+            formatDate(timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+            },
+            formatDeliveryTime(row) {
+                let str = '';
+                if (row.type === 0) {
+                    let date = new Date(row.delivery_time * 1000);
+                    str = date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+                    if (row.delivery_time_type === 0 || row.delivery_time_type === 2 || row.delivery_time_type === 4) {
+                        str += ' 上午 9：00~11：00';
+                    } else {
+                        str += ' 下午 15：00~17：30';
+                    }
+                } else {
+                    str = '即时达';
+                }
+                return str
+            },
+            prefix(num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            },
+            excel_goods() {
+                this.goodsDialogVisible = true;
+            },
+            daoChu(ruleForm) {
+                this.$refs[ruleForm].validate((valid) => {
+                    if (valid) {
+                        // alert('submit!');
+                        let date = this.ruleForm.date;
+                        this.goodsDialogVisible = false;
+                        window.location.href = '/admin/order/excel?date=' + date + '';
+
+
+                    } else {
+                        //console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            doSeperate() {
+                this.onDeperate = true;
+                axios.get('/admin/order/seperate', {
+                    headers: this.headers,
+                    params: this.seperateForm
+                }).then((response) => {
+                    this.onDeperate = false;
+                    if (response.data.code === 1) {
+                        this.$message.success('');
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch((error) => {
+                    this.onDeperate = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            seperate(orderId) {
+                this.seperateForm = {
+                    id: orderId,
+                    num: 2
+                };
+                this.doDeperate = true;
+            }
+        }
+    })
+</script>
+</html>

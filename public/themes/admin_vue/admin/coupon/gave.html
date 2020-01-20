@@ -1,0 +1,147 @@
+<include file="public@header_vue"/>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="优惠券发放列表" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="24">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item label="优惠券名称:">
+                            <el-input v-model="form.name" placeholder="优惠券名称" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="状态:">
+                            <el-select v-model="form.status" placeholder="请选择">
+                                <el-option label="已过期" :value="0"></el-option>
+                                <el-option label="未使用" :value="1"></el-option>
+                                <el-option label="已使用" :value="2"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="id" label="#" width="80"></el-table-column>
+                <el-table-column prop="name" label="优惠券名称" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="type" label="优惠券种类" width="140">
+                    <template slot-scope="scope">
+                        {{type[scope.row.type]}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="type" label="优惠力度" width="140">
+                    <template slot-scope="scope">
+                        <template v-if="scope.row.type === 0">
+                            满{{scope.row.threshold}}减{{scope.row.strength}}
+                        </template>
+                        <template v-if="scope.row.type === 1">
+                            {{scope.row.strength}}折
+                        </template>
+                        <template v-if="scope.row.type === 2">
+                            抵扣￥{{scope.row.strength}}
+                        </template>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="uid" label="领取用户ID" min-width="80"></el-table-column>
+                <el-table-column prop="user_nickname" label="领取用户昵称" min-width="100" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="status" label="状态" min-width="100">
+                    <template slot-scope="scope">
+                        <template v-if="scope.row.use_time">已使用</template>
+                        <template v-else-if="scope.row.end_time < Date.parse(new Date()) / 1000">已使用</template>
+                        <template v-else>未使用</template>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="active_time" label="派发日期" width="100">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.active_time)}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="start_time" label="有效期" width="190">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.start_time)}} - {{formatDate(scope.row.end_time)}}
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    name: '',
+                    status: ''
+                },
+                type: ['满N减N', 'N折券', '现金抵用券']
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    name: '',
+                    status:''
+                };
+            },
+            getData (page = 1) {
+                let _this = this;
+                let params = {page: page};
+                this.onDataLoading = true;
+                if (this.form.name !== ''){
+                    params.name = this.form.name;
+                }
+                if (this.form.status !== ''){
+                    params.status = this.form.status;
+                }
+                axios.get('/admin/coupon/gave', {
+                    headers: this.headers,
+                    params: params
+                }).then(function (response) {
+                    _this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        _this.tableData = response.data.data.data;
+                        _this.totalNum = response.data.data.total;
+                        _this.currentPage = response.data.data.current_page;
+                    } else {
+                        _this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    _this.onDataLoading = false;
+                    _this.$message.error(error.toString())
+                })
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

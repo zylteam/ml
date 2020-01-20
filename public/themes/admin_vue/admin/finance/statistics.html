@@ -1,0 +1,460 @@
+<include file="public@header_vue"/>
+<style>
+.el-tabs__content {
+    min-height: 400px;
+}
+.avatar {
+    width: 40px;
+}
+.el-pagination {
+    margin-top: 20px;
+}
+.user-box {
+    width: 120px;
+    cursor: pointer;
+}
+.user-box .el-card__body {
+    padding: 0;
+}
+.chose-user {
+    width: 100%;
+    height: 190px;
+    line-height: 190px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 28px;
+    color: #8c939d;
+    transition: all .4s;
+}
+.chose-user:hover {
+    font-size: 36px;
+    color: #409EFF;
+}
+.user-avatar {
+    width: 100%;
+}
+.user-info {
+    padding: 0 10px 10px;
+}
+.user-box p {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+.user-nickname {
+    height: 25px;
+    line-height: 25px;
+}
+.user-mobile {
+    height: 20px;
+    line-height: 20px;
+    font-size: 12px;
+    color: #999999;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <el-tabs type="border-card">
+        <el-tab-pane label="余额管理" v-loading="onDataLoading">
+            <el-row>
+                <el-col :span="24">
+                    <el-form :inline="true" :model="form" size="mini">
+                        <el-form-item>
+                            <el-radio-group v-model="form.type">
+                                <el-radio-button :label="0">日视图</el-radio-button>
+                                <el-radio-button :label="1">月视图</el-radio-button>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item v-if="form.type === 0">
+                            <el-date-picker v-model="form.date_range" type="daterange" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="pickerOptions2"></el-date-picker>
+                        </el-form-item>
+                        <el-form-item v-else>
+                            <el-date-picker v-model="form.month_range" type="monthrange" unlink-panels range-separator="至" start-placeholder="开始月份" end-placeholder="结束月份" :picker-options="pickerOptions3"></el-date-picker>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="getData()">查询</el-button>
+                            <el-button type="danger" @click="clearForm()">清空</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+            <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="create_date" label="日期">
+                    <template slot-scope="scope">
+                        {{formatDate(scope.row.create_date)}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="wechat_total" label="微信支付总额" min-width="120" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        ￥ {{scope.row.wechat_total}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="wechat_recharge" label="微信充值总额" min-width="120" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        ￥ {{scope.row.wechat_recharge}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="alipay_total" label="支付宝支付总额" min-width="120" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        ￥ {{scope.row.alipay_total}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="alipay_recharge" label="支付宝充值总额" min-width="120" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        ￥ {{scope.row.alipay_recharge}}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="account" label="余额支付总额" min-width="120" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        ￥ {{scope.row.account}}
+                    </template>
+                </el-table-column>
+                <!--<el-table-column label="操作" fixed="right" width="160">
+                    <template slot-scope="scope">
+                        <el-button size="mini" type="text" @click="detail(scope.row.id)">明细</el-button>
+                        <el-button size="mini" type="text" @click="edit(scope.row)">操作余额</el-button>
+                    </template>
+                </el-table-column>-->
+            </el-table>
+            <el-pagination background layout="prev, pager, next" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+        </el-tab-pane>
+    </el-tabs>
+    <el-dialog :visible.sync="dialogVisible" width="60%" v-loading.fullscreen="dialogLoading" title="操作用户余额">
+        <el-form :model="editForm" label-width="100px">
+            <el-form-item label="用户：">
+                <el-card class="user-box"  shadow="hover">
+                    <img class="user-avatar" v-if="editForm.avatar === '' || !editForm.avatar" src="/static/images/headicon.png"/>
+                    <img class="user-avatar" v-else :src="editForm.avatar"/>
+                    <div class="user-info">
+                        <p class="user-nickname">{{`${editForm.user_nickname ? editForm.user_nickname : '暂无昵称'}`}}</p>
+                        <p class="user-mobile">{{editForm.mobile}}</p>
+                        <p class="user-mobile">当前余额：</p>
+                        <p class="user-mobile">{{editForm.account_balance}}</p>
+                    </div>
+                </el-card>
+            </el-form-item>
+            <el-form-item label="操作金额：">
+                <el-input-number v-model="editForm.number" placeholder="操作金额" :min="0" :step="0.01"></el-input-number>
+            </el-form-item>
+            <el-form-item label="操作类型：">
+                <el-radio v-model="editForm.action_type" :label="1">充值</el-radio>
+                <el-radio v-model="editForm.action_type" :label="0">扣款</el-radio>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="dialogVisible = false">取消</el-button>
+            <el-button type="danger" @click="submit()">确定</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog :visible.sync="detailVisible" width="60%" title="用户账户明细">
+        <el-table :data="detailAccountData" style="width: 100%" v-loading="detailAccountDataLoading">
+            <el-table-column prop="id" label="#" width="60"></el-table-column>
+            <el-table-column prop="pay_way" label="操作类型" min-width="100">
+                <template slot-scope="scope">
+                    {{payWay[scope.row.pay_way] ? payWay[scope.row.pay_way] : '消费'}}
+                </template>
+            </el-table-column>
+            <el-table-column prop="type" label="类型" min-width="100">
+                <template slot-scope="scope">
+                    {{accountType[scope.row.type]}}
+                </template>
+            </el-table-column>
+            <el-table-column prop="value" label="金额" min-width="100">
+                <template slot-scope="scope">
+                    <span style="color: red" v-if="scope.row.type === 0">- ￥{{scope.row.value}}</span>
+                    <span style="color: cornflowerblue" v-else>+ ￥{{scope.row.value}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="end_time" label="时间" width="160">
+                <template slot-scope="scope">
+                    {{formatDate(scope.row.pay_time)}}
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination background layout="total,prev, pager, next" :total="detailAccountTotalNum" :current-page.sync="detailAccountCurrentPage" @current-change="getAccountDetail"></el-pagination>
+    </el-dialog>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() {
+            return {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                tableData: [],
+                onDataLoading: false,
+                totalNum: 0,
+                currentPage: 1,
+                form: {
+                    date_range: [],
+                    month_range: [],
+                    type: 0
+                },
+                pickerOptions2: {
+                    onPick (date) {
+                        if (date.maxDate) {
+                            date.maxDate.setTime(date.maxDate.getTime() + 86400000 - 1000);
+                        }
+                    },
+                    shortcuts: [{
+                        text: '最近七天',
+                        onClick(picker) {
+                            const end = new Date();
+                            let start = new Date();
+                            start = new Date(`${start.getFullYear()}-${start.getMonth()+1}-${start.getDate()}`);
+                            end.setTime(start.getTime() + 3600 * 1000 * 24 * 8 - 1000);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '本月',
+                        onClick(picker) {
+                            const start = new Date();
+                            start.setTime(new Date(`${start.getFullYear()}-${start.getMonth() + 1}`));
+                            let year = start.getFullYear();
+                            let month = start.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            let end = new Date(`${year}-${month}`);
+                            end.setTime(end.getTime() - 1000);
+
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            let year = end.getFullYear();
+                            let month = end.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            end.setTime(new Date(`${year}-${month}`).getTime() - 1000);
+
+                            let startYear = end.getFullYear();
+                            let startMonth = end.getMonth() - 1;
+                            if (startMonth <= 0) {
+                                startMonth += 12;
+                                startYear--;
+                            }
+                            let start = new Date(`${startYear}-${startMonth}`);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
+                pickerOptions3: {
+                    onPick (date) {
+                        if (date.maxDate) {
+                            let year = date.maxDate.getFullYear();
+                            let month = date.maxDate.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            date.maxDate.setTime(new Date(`${year}-${month}`) - 1000);
+                        }
+                    },
+                    shortcuts: [{
+                        text: '本月',
+                        onClick(picker) {
+                            const start = new Date();
+                            start.setTime(new Date(`${start.getFullYear()}-${start.getMonth() + 1}`));
+                            let year = start.getFullYear();
+                            let month = start.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            let end = new Date(`${year}-${month}`);
+                            end.setTime(end.getTime() - 1000);
+
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '今年至今',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date(new Date().getFullYear(), 0);
+                            end.setTime(new Date(`${end.getFullYear()}-${end.getMonth() + 1}-${end.getDate()}`).getTime() + 86400000 - 1000);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '最近六个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            let year = end.getFullYear();
+                            let month = end.getMonth() + 2;
+                            if (month > 12) {
+                                year++;
+                                month = 1;
+                            }
+                            end.setTime(new Date(`${year}-${month}`).getTime() - 1000);
+
+                            let startYear = end.getFullYear();
+                            let startMonth = end.getMonth() - 4;
+                            if (startMonth <= 0) {
+                                startMonth += 12;
+                                startYear--;
+                            }
+                            let start = new Date(`${startYear}-${startMonth}`);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
+
+                editForm: {},
+                dialogVisible: false,
+                dialogLoading: false,
+
+                detailUserId: 0,
+                detailVisible: false,
+                detailAccountData: [],
+                detailAccountDataLoading: false,
+                detailAccountTotalNum: 0,
+                detailAccountCurrentPage: 1,
+                payWay: {
+                    Card: '充值卡',
+                    WeChat: '微信支付',
+                    Alipay: '支付宝支付',
+                    Admin: '后台操作'
+                },
+                accountType: ['减少', '增加']
+            }
+        },
+        created () {
+            this.getData();
+        },
+        methods: {
+            clearForm () {
+                this.form = {
+                    date_range: [],
+                    month_range: [],
+                    type: 0
+                };
+            },
+            getData (page = 1) {
+                let params = {
+                    page: page,
+                    type: this.form.type
+                };
+                this.onDataLoading = true;
+                if (this.form.date_range.length === 2 && this.form.type === 0){
+                    params.date_range = [
+                        this.form.date_range[0] / 1000,
+                        this.form.date_range[1] / 1000
+                    ];
+                }
+                if (this.form.month_range.length === 2 && this.form.type === 1){
+                    params.month_range = [
+                        this.form.month_range[0] / 1000,
+                        this.form.month_range[1] / 1000
+                    ];
+                }
+                axios.get('/admin/finance/statistics', {
+                    headers: this.headers,
+                    params: params
+                }).then((response) => {
+                    this.onDataLoading = false;
+                    if (response.data.code === 1) {
+                        this.tableData = response.data.data.data;
+                        this.totalNum = response.data.data.total;
+                        this.currentPage = response.data.data.current_page;
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    this.onDataLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            edit (row) {
+                if (row) {
+                    row = JSON.parse(JSON.stringify(row));
+                    row.number = 0;
+                    row.action_type = 1;
+                    this.editForm = row;
+                }
+                this.dialogVisible = true;
+            },
+            submit () {
+                this.$confirm(`此操作${this.editForm.action_type === 1 ? '增加' : '减少'} ${this.editForm.user_nickname ? this.editForm.user_nickname : this.editForm.mobile} 余额 ￥${this.editForm.number}`, '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    let params = {
+                        uid: this.editForm.id,
+                        number: this.editForm.number,
+                        type: this.editForm.action_type
+                    };
+                    this.dialogLoading = true;
+                    axios.post('/admin/finance/accountOperation', params, {
+                        headers: this.headers
+                    }).then((response) => {
+                        this.dialogLoading = false;
+                        if (response.data.code === 1) {
+                            this.$message.success('成功');
+                            this.dialogVisible = false;
+                            this.getData();
+                        } else {
+                            this.$message.warning(response.data.msg);
+                        }
+                    }).catch((error) => {
+                        this.dialogLoading = false;
+                        this.$message.error(error.toString())
+                    })
+                }).catch(() => {
+                    this.$message.info('操作取消');
+                });
+            },
+            detail (id) {
+                this.detailUserId = id;
+                this.detailVisible = true;
+                this.getAccountDetail();
+            },
+            getAccountDetail (page = 1) {
+                let params = {
+                    page: page,
+                    id: this.detailUserId
+                };
+                this.detailAccountDataLoading = true;
+                if (this.form.like !== ''){
+                    params.like = this.form.like;
+                }
+                axios.get('/admin/finance/accountDetail', {
+                    headers: this.headers,
+                    params: params
+                }).then((response) => {
+                    this.detailAccountDataLoading = false;
+                    if (response.data.code === 1) {
+                        this.detailAccountData = response.data.data.data;
+                        this.detailAccountTotalNum = response.data.data.total;
+                        this.detailAccountCurrentPage = response.data.data.current_page;
+                    } else {
+                        this.$message.warning(response.data.msg);
+                    }
+                }).catch(function (error) {
+                    this.detailAccountDataLoading = false;
+                    this.$message.error(error.toString())
+                })
+            },
+            formatDate (timestamp) {
+                let date = new Date(timestamp * 1000);
+                return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+            },
+            prefix (num) {
+                if (num < 10) {
+                    return '0' + num;
+                }
+                return num;
+            }
+        }
+    })
+</script>
+</html>

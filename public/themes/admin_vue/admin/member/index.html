@@ -1,0 +1,537 @@
+<include file="public@header_vue"/>
+</head>
+<body>
+<div id="app">
+<el-tabs type="border-card">
+    <el-tab-pane label="会员列表" v-loading="onDataLoading">
+
+        <el-row>
+            <!--<el-button :span="4" type="primary" size="mini" style="float: right;margin-bottom: 10px;" @click="edit(null)">新增</el-button>-->
+            <el-col :span="24">
+                <el-form :inline="true" :model="form" class="demo-form-inline" size="mini">
+                    <el-form-item label="会员手机号：">
+                        <el-input v-model="form.mobile" placeholder="请输入会员手机号"></el-input>
+                    </el-form-item>
+                    <el-form-item label="会员身份：">
+                        <el-select v-model="form.user_type"  placeholder="请选择">
+                            <el-option v-for="(item,index) in user_type" :key="index" :label="item" :value="item"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="状态：">
+                        <el-select v-model="form.user_status" placeholder="请选择">
+                            <el-option v-for="(item,index) in user_status" :label="item" :value="index"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="所属门店：">
+                        <el-select v-model="form.store_id" placeholder="请选择">
+                            <el-option v-for="(item,index) in storeData" :label="item.name" :value="item.id"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="danger" @click="clearForm()" icon="el-icon-refresh">清空</el-button>
+                        <el-button type="primary" @click="getData()" icon="el-icon-search">查询</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+
+        <el-table :data="tableData" style="width: 100%">
+            <el-table-column prop="name" label="会员姓名" width="180">
+            </el-table-column>
+            <el-table-column prop="id_card" label="身份证号码" width="180">
+            </el-table-column>
+            <el-table-column prop="mobile" label="手机号" width="120">
+            </el-table-column>
+
+            <el-table-column prop="parent_id" label="来源">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.parent_name === ''">门店添加</span>
+                    <span v-else>{{scope.row.parent_name}}引进</span>
+                </template>
+            </el-table-column>
+
+            <el-table-column prop="user_type" label="会员身份">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.user_type == '0'">普通会员</span>
+                    <span v-else-if="scope.row.user_type == 1">会员</span>
+                    <span v-else>经销商</span>
+                </template>
+            </el-table-column>
+
+            <el-table-column prop="user_status" label="状态">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.user_status == 1">正常</span>
+                    <span v-else>锁定</span>
+                </template>
+            </el-table-column>
+
+            <el-table-column prop="create_time" label="注册时间" min-width="120">
+                <template slot-scope="scope">
+                    {{formatDateAll(scope.row.create_time)}}
+                </template>
+            </el-table-column>
+
+            <el-table-column prop="child_num" label="推荐人数">
+            </el-table-column>
+
+            <el-table-column prop="store_name" label="所属门店">
+            </el-table-column>
+
+            <el-table-column label="操作" fixed="right" min-width="100">
+                <template slot-scope="scope">
+                    <el-button type="text" @click="edit(scope.row)">修改</el-button>
+
+                    <el-button type="text" @click="tuijian(scope.row)">查看推荐</el-button>
+
+                </template>
+            </el-table-column>
+
+        </el-table>
+        <el-pagination background layout="prev, pager, next" :page-size="15" :total="totalNum" :current-page.sync="currentPage" @current-change="getData"></el-pagination>
+
+    </el-tab-pane>
+
+    <el-dialog :visible.sync="dialogVisible" v-loading.fullscreen="layerloading">
+
+        <el-form :model="editForm" :rules="rules" ref="editForm" class="demo-ruleForm" label-width="150px">
+            <el-form-item label="身份证" prop="id_card">
+                <el-col :span="15">
+                    <el-input v-model="editForm.id_card" placeholder="请输入身份证号码" :disabled="editForm.id === '' ? false : true "></el-input>
+                </el-col>
+            </el-form-item>
+
+            <el-form-item label="姓名" prop="name">
+                <el-col :span="15">
+                    <el-input v-model="editForm.name" placeholder="请输入姓名" :disabled="editForm.id === '' ? false : true "></el-input>
+                </el-col>
+            </el-form-item>
+
+
+            <el-form-item label="手机号" prop="mobile">
+                <el-col :span="15">
+                    <el-input v-model="editForm.mobile" placeholder="请输入手机号" :disabled="editForm.id === '' ? false : true "></el-input>
+                </el-col>
+            </el-form-item>
+
+
+            <el-form-item label="会员身份" prop="user_type">
+                <el-radio-group v-model="editForm.user_type">
+                    <el-radio :label="0">普通会员</el-radio>
+                    <el-radio :label="1">会员</el-radio>
+                    <el-radio :label="2">经销商</el-radio>
+                </el-radio-group>
+            </el-form-item>
+
+
+            <el-form-item label="推荐人">
+                <el-col :span="15">
+                    <el-input v-model="editForm.parent_key" placeholder="请输入推荐人手机号或者身份证号码" :disabled="editForm.id === '' ? false : true "></el-input>
+                </el-col>
+            </el-form-item>
+
+
+            <el-form-item label="状态" prop="user_status">
+                <el-radio-group v-model="editForm.user_status">
+                    <el-radio :label="1">正常</el-radio>
+                    <el-radio :label="0">锁定</el-radio>
+                </el-radio-group>
+            </el-form-item>
+
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button v-if="editForm.id === ''" type="primary" @click="submitForm('editForm')">新增</el-button>
+            <el-button v-else type="primary" @click="submitForm('editForm')">修改</el-button>
+        </span>
+    </el-dialog>
+
+    <el-dialog :visible.sync="tuijianVisible" width="90%" v-loading.fullscreen="tuijianloading">
+
+        <el-form :inline="true" :model="form_tj" class="demo-form-inline" size="mini">
+
+            <el-form-item label="搜索条件：">
+                <el-select v-model="form_tj.choose" placeholder="请选择"  style="width: 110px">
+                    <el-option label="姓名" :value="1">姓名</el-option>
+                    <el-option label="手机号" :value="2">手机号</el-option>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="搜索关键字：">
+                <el-input v-model="form_tj.description" placeholder="请输入关键字"></el-input>
+            </el-form-item>
+
+            <el-form-item label="时间：">
+                    <el-date-picker v-model="form_tj.date" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="timestamp" style="width: 220px"></el-date-picker>
+            </el-form-item>
+
+
+            <el-form-item label="所属门店：">
+                <el-select v-model="form_tj.store_id" placeholder="请选择">
+                    <el-option v-for="(item,index) in storeData" :label="item.name" :value="item.id"></el-option>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item>
+                <el-button type="danger" @click="clearForm_tj()">清空</el-button>
+                <el-button type="primary" @click="fetchData()">查询</el-button>
+            </el-form-item>
+
+        </el-form>
+
+        <el-table :data="tableDetail" style="width: 100%">
+            <el-table-column prop="id" label="编号"></el-table-column>
+            <el-table-column prop="name" label="姓名"></el-table-column>
+            <el-table-column prop="id_card" label="身份证号码" width="200px"></el-table-column>
+            <el-table-column prop="mobile" label="手机号" min-width="140px"></el-table-column>
+            <el-table-column prop="user_type" label="身份">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.user_type == 2">普通会员</span>
+                    <span v-else-if="scope.row.user_type == 3">会员</span>
+                    <span v-else>经销商</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="user_status" label="状态">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.user_status == 1">正常</span>
+                    <span v-else>锁定</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="tuijian_num" label="推荐人数"></el-table-column>
+
+            <el-table-column prop="store_name" label="所属门店">
+            </el-table-column>
+
+            <el-table-column prop="bind_time" label="绑定时间" min-width="150px"></el-table-column>
+        </el-table>
+        <el-pagination background layout="prev, pager, next" :page-size="15" :total="detail_totalNum" :current-page.sync="detail_currentPage" @current-change="fetchData"></el-pagination>
+
+    </el-dialog>
+
+</el-tabs>
+</div>
+</body>
+<style>
+.el-pagination {
+    margin-top: 20px;
+}
+
+.el-collapse {
+    margin-top: 10px;
+}
+
+.detil-item {
+    padding: 20px 0px;
+}
+
+.left-span {
+    width: 100px;
+}
+</style>
+<script>
+var E = window.wangEditor;
+var app = new Vue({
+    el: '#app',
+    data: function () {
+
+        var checkIdCard = (rule, value, callback) => {
+            if (!value) {
+                return callback(new Error('身份证号码不能为空！'));
+            } else {
+                // 身份证号码为15位或者18位，15位时全为数字，18位前17位为数字，最后一位是校验位，可能为数字或字符X
+                const reg = /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/;
+                console.log(reg.test(value));
+                if (reg.test(value)) {
+                    callback();
+                } else {
+                    return callback(new Error('请输入正确的身份证号码！'));
+                }
+            }
+        };
+
+        var checkPhone = (rule, value, callback) => {
+            if (!value) {
+                return callback(new Error('手机号不能为空'));
+            } else {
+                const reg = /^1[3|4|5|7|8][0-9]\d{8}$/
+                console.log(reg.test(value));
+                if (reg.test(value)) {
+                    callback();
+                } else {
+                    return callback(new Error('请输入正确的手机号'));
+                }
+            }
+        };
+
+        return {
+            tableData: [],
+            tableDetail:[],
+            storeData:[],
+            user_type:['普通会员','会员','经销商'],
+            user_status: ['禁用', '正常'],
+            onDataLoading: false,
+            totalNum: 0,
+            currentPage: 1,
+            detail_totalNum: 0,
+            detail_currentPage: 1,
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            form: {
+                mobile: '',
+                user_type: '',
+                user_status: '',
+                store_id:''
+            },
+            form_tj: {
+                choose:'',
+                description:'',
+                date:'',
+                store_id:''
+            },
+            dialogVisible:false,
+            layerloading:false,
+            tuijianVisible:false,
+            tuijianloading:false,
+            editForm: {
+                id:'',
+                name:'',
+                id_card: '',
+                mobile: '',
+                user_type: '',
+                parent_key:'',
+                user_status:'',
+            },
+            rules: {
+                id_card: [
+                    {required: true,validator: checkIdCard, trigger: 'blur'}
+                ],
+
+                name: [
+                    { required: true, message: '请输入姓名', trigger: 'blur' },
+                    { min: 2, max: 5, message: '长度在 2 到 5 个字符', trigger: 'blur' }
+                ],
+
+                mobile: [
+                    {required: true,validator: checkPhone, trigger: 'blur'}
+                ],
+
+                user_type: [
+                    { required: true, message: '请选择会员身份', trigger: 'change' }
+                ],
+
+                // parent_key: [
+                //     { required: true, message: '请输入推荐人手机号或者身份证号码', trigger: 'blur' },
+                //     // { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
+                // ],
+
+                user_status: [
+                    { required: true, message: '请选择会员状态', trigger: 'change' }
+                ],
+            }
+        }
+    },
+    created() {
+        this.storeData = JSON.parse('{$storeData}');
+        this.getData();
+    },
+    methods: {
+
+        clearForm () {
+            console.log(this.form);
+            this.form = {
+                mobile: '',
+                user_type: '',
+                user_status: '',
+                store_id:''
+            }
+        },
+
+        clearForm_tj () {
+            this.form_tj = {
+                choose:'',
+                description:'',
+                date:'',
+                store_id:''
+            }
+        },
+
+
+        getData(page = 1) {
+            let _this = this;
+            let params = {page: page};
+            this.onDataLoading = true;
+            if (this.form.mobile !== '') {
+                params.mobile = this.form.mobile;
+            }
+
+            if (this.form.user_type !== '') {
+                params.user_type = this.form.user_type;
+            }
+
+            if (this.form.user_status !== '') {
+                params.user_status = this.form.user_status;
+            }
+            if (this.form.store_id !== '') {
+                params.store_id = this.form.store_id;
+            }
+            axios.get('/admin/Member/index', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then(function (response) {
+
+                console.log(response);
+
+                _this.onDataLoading = false;
+                if (response.data.code === 1) {
+                    _this.tableData = response.data.data.list;
+                    _this.totalNum = response.data.data.count;
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.onDataLoading = false;
+                _this.$message.error(error.toString())
+            })
+        },
+
+        edit (row) {
+
+            if (row == null) {
+
+                this.editForm = {id:'',id_card:'',name:'',mobile:'',user_type:'',parent_key:'',user_status:''};
+
+            } else {
+                this.editForm = JSON.parse(JSON.stringify(row));//深拷贝
+            }
+
+            console.log(this.editForm);
+            this.dialogVisible = true;
+        },
+
+        submitForm(editForm) {
+            let _this = this;
+
+            this.$refs[editForm].validate((valid) => {
+                if (valid) {
+                    // alert('submit!');
+                    _this.layerloading = true;
+                    axios.post('/admin/member/caoZuo', this.editForm, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    }).then(function (response) {
+                        console.log(response);
+                        _this.layerloading = false;
+
+                        if (response.data.code === 1) {
+                            if (_this.editForm.id === '') {
+                                _this.$message.success('新增完成');
+                            } else {
+                                _this.$message.success('修改成功');
+                            }
+                            _this.dialogVisible = false;
+                            _this.getData();
+                        } else {
+                            _this.$message.warning(response.data.msg);
+                        }
+                    }).catch(function (error) {
+                        _this.layerloading = false;
+                        _this.$message.error(error.toString())
+                    })
+
+                } else {
+                    console.log('error submit!!');
+                    return false;
+                }
+            });
+        },
+
+        tuijian (row) {
+            this.editForm = JSON.parse(JSON.stringify(row));//深拷贝
+            this.tuijianVisible = true;
+            this.fetchData();
+        },
+
+
+        fetchData (page = 1) {
+
+            let _this = this;
+            let choose = '';
+            let description = '';
+            let date = '';
+            let store_id = '';
+
+            if(_this.form_tj.choose != ''){
+                choose = this.form_tj.choose;
+            }
+
+            if(_this.form_tj.description != ''){
+                description = this.form_tj.description;
+            }
+
+            if(_this.form_tj.date != ''){
+                date = this.form_tj.date;
+            }
+
+            if(_this.form_tj.store_id != ''){
+                store_id = this.form_tj.store_id;
+            }
+
+            let id = this.editForm.id;
+
+            let params = { page:page ,choose:choose ,description:description ,date:date ,id:id ,store_id:store_id};
+            this.tuijianloading = true;
+
+            axios.get('/admin/Member/spreadList', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                params: params
+            }).then(function (response) {
+
+                _this.tuijianloading = false;
+
+                if (response.data.code === 1) {
+                    _this.tableDetail = response.data.data.list;
+                    _this.detail_totalNum = response.data.data.count;
+                } else {
+                    _this.$message({
+                        message: response.data.msg,
+                        type: 'warning'
+                    });
+                }
+            }).catch(function (error) {
+                _this.tuijianloading = false;
+                _this.$message.error(error.toString())
+            })
+
+
+
+
+        },
+
+
+        formatDateFull(timestamp) {
+            let date = new Date(timestamp * 1000);
+            return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+        },
+        formatDateAll(timestamp) {
+            let date = new Date(timestamp * 1000);
+            return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate()) + ' ' + this.prefix(date.getHours()) + ':' + this.prefix(date.getMinutes()) + ':' + this.prefix(date.getSeconds());
+        },
+        formatDate(timestamp) {
+            let date = new Date(timestamp * 1000);
+            return date.getFullYear() + '-' + this.prefix(date.getMonth() + 1) + '-' + this.prefix(date.getDate());
+        },
+        prefix(num) {
+            if (num < 10) {
+                return '0' + num;
+            }
+            return num;
+        }
+    }
+})
+</script>
+</html>
