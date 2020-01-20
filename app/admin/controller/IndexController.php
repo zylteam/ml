@@ -34,8 +34,6 @@ class IndexController extends AdminBaseController
         $data['mobile'] = '18262518547';
         $data['code'] = '11111';
         $config = hook_one('wechat_config',$data);
-        var_dump($config);
-        die();
         return $config;
         $this->success('config',null, ['config' => $config]);
     }
